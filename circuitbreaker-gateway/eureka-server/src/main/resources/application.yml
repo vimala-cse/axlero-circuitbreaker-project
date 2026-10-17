@@ -1,0 +1,18 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: eureka-server
+
+eureka:
+  client:
+    # The registry itself doesn't need to register with - or fetch a
+    # registry from - itself.
+    register-with-eureka: false
+    fetch-registry: false
+  server:
+    # Dev-friendly: evict stale instances faster than the 90s default,
+    # so when we stop a service to demo the Circuit Breaker, the
+    # dashboard reflects that quickly instead of showing a ghost entry.
+    eviction-interval-timer-in-ms: 5000
