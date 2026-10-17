@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.axlero</groupId>
+    <artifactId>circuitbreaker-gateway</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+    <name>CircuitBreaker - Cloud-Native E-Commerce API Gateway</name>
+
+    <!--
+        This is the PARENT module. It does not contain any code itself -
+        it just lists the 5 sub-modules (microservices + registry + gateway)
+        and holds shared dependency-version info so every module stays on
+        the same Spring Boot / Spring Cloud versions.
+    -->
+    <modules>
+        <module>eureka-server</module>
+        <module>product-service</module>
+        <module>inventory-service</module>
+        <module>recommendation-service</module>
+        <module>api-gateway</module>
+    </modules>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.5</version>
+        <relativePath/>
+    </parent>
+
+    <properties>
+        <java.version>17</java.version>
+        <spring-cloud.version>2023.0.1</spring-cloud.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Keeps every module's Eureka/Gateway/Resilience4j dependency
+                 versions in sync with each other automatically. -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
