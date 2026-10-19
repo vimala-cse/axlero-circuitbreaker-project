@@ -1,0 +1,53 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      # "lb://" means "look this service name up in Eureka and
+      # load-balance across whatever instances are currently
+      # registered" - this is the dynamic routing the project guide
+      # asks for (Routing Audit, Mid-Project Review).
+      routes:
+        - id: product-service-route
+          uri: lb://product-service
+          predicates:
+            - Path=/api/products/**
+
+        - id: inventory-service-route
+          uri: lb://inventory-service
+          predicates:
+            - Path=/api/inventory/**
+
+        - id: recommendation-service-route
+          uri: lb://recommendation-service
+          predicates:
+            - Path=/api/recommendations/**
+      # Belt-and-braces: also auto-create a route per registered
+      # service, reachable as /SERVICE-NAME/**. Handy for quick manual
+      # testing against whatever is in Eureka right now.
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # "gateway" exposes /actuator/gateway/routes - useful for the
+        # Routing Audit requirement (prove requests go to the right
+        # backend) and later for the Monitoring UI.
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
