@@ -6,11 +6,8 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      # "lb://" means "look this service name up in Eureka and
-      # load-balance across whatever instances are currently
-      # registered" - this is the dynamic routing the project guide
-      # asks for (Routing Audit, Mid-Project Review).
       routes:
+        # ---- Normal routes (Week 1) ----
         - id: product-service-route
           uri: lb://product-service
           predicates:
@@ -21,13 +18,64 @@ spring:
           predicates:
             - Path=/api/inventory/**
 
+        # ---- Week 2: this route is now protected by a Circuit Breaker ----
+        # "recommendationCB" is the name of the breaker; its settings
+        # (window size, thresholds, timeout...) live in ResilienceConfig.java.
+        # If the breaker is OPEN, or the call times out, or the service
+        # answers with one of the error codes below, the request is
+        # forwarded to FallbackController instead of reaching the service.
         - id: recommendation-service-route
           uri: lb://recommendation-service
           predicates:
             - Path=/api/recommendations/**
-      # Belt-and-braces: also auto-create a route per registered
-      # service, reachable as /SERVICE-NAME/**. Handy for quick manual
-      # testing against whatever is in Eureka right now.
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: recommendationCB
+                fallbackUri: forward:/fallback/recommendations
+                statusCodes:
+                  - 500
+                  - 502
+                  - 503
+                  - 504
+
+        # ---- Week 2: chaos switch for recommendation-service ----
+        # Deliberately NOT behind the circuit breaker. If it were, then
+        # once the breaker opened we could never send the request that
+        # turns the chaos back off.
+        - id: recommendation-chaos-route
+          uri: lb://recommendation-service
+          predicates:
+            - Path=/chaos/**
+
+        # ---- Week 2: health proxies for the dashboard ----
+        # The browser only talks to the gateway (port 8080). These routes
+        # let it read each service's /actuator/health through the gateway.
+        # If a service is stopped, the gateway answers with an error and
+        # the dashboard shows that service as DOWN.
+        - id: product-health-route
+          uri: lb://product-service
+          predicates:
+            - Path=/services/product/health
+          filters:
+            - RewritePath=/services/product/health, /actuator/health
+
+        - id: inventory-health-route
+          uri: lb://inventory-service
+          predicates:
+            - Path=/services/inventory/health
+          filters:
+            - RewritePath=/services/inventory/health, /actuator/health
+
+        - id: recommendation-health-route
+          uri: lb://recommendation-service
+          predicates:
+            - Path=/services/recommendation/health
+          filters:
+            - RewritePath=/services/recommendation/health, /actuator/health
+
+      # Auto-creates a route per registered service, reachable as
+      # /SERVICE-NAME/**. Handy for quick manual testing.
       discovery:
         locator:
           enabled: true
@@ -44,9 +92,6 @@ management:
   endpoints:
     web:
       exposure:
-        # "gateway" exposes /actuator/gateway/routes - useful for the
-        # Routing Audit requirement (prove requests go to the right
-        # backend) and later for the Monitoring UI.
         include: health,info,gateway
   endpoint:
     health:
