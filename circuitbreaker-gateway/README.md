@@ -74,17 +74,73 @@ circuitbreaker-gateway/
 ├── product-service/
 ├── inventory-service/
 ├── recommendation-service/
-└── api-gateway/
+├── api-gateway/
+└── dashboard/                  (React + Vite monitoring / chaos dashboard)
 ```
+
+## Week 2 — Circuit breaker, chaos switch and dashboard
+
+**What was added**
+
+- **Circuit breaker on the gateway** (Resilience4j). The
+  `/api/recommendations/**` route is wrapped in a breaker called
+  `recommendationCB`. If the Recommendation service is slow (over 3 s),
+  fails (HTTP 500/502/503/504) or is stopped, the gateway stops waiting
+  and answers instantly with a safe fallback list of **Top Sellers**
+  (`FallbackController`). Rules live in `ResilienceConfig.java`:
+  judge the last 10 calls, open at 50% failures or slow calls (after at
+  least 5 calls), stay open 10 s, then let 3 test calls through
+  (half-open) before closing again.
+- **Chaos switch** in recommendation-service. `ChaosState` can put the
+  service into `normal`, `slow` (waits 4 s) or `fail` (HTTP 500) at any
+  time, without a restart. This reproduces the Black Friday use case from
+  the project guide.
+- **Gateway routes for the dashboard**: `/chaos` (the chaos switch, left
+  outside the breaker on purpose) and `/services/<name>/health` (each
+  service's health, read through the gateway).
+- **React dashboard** (`dashboard/`): service health cards, chaos
+  control buttons, a live request log (live / fallback / error counts),
+  a "send 12 at once" burst button and a storefront preview that keeps
+  working when the Recommendation service is down.
+
+**New endpoints (all through the gateway on port 8080)**
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /chaos` | current chaos mode of recommendation-service |
+| `POST /chaos?mode=normal\|slow\|fail&delayMs=4000` | change the chaos mode |
+| `GET /services/product/health` | product-service health (also `inventory`, `recommendation`) |
+| `GET /fallback/recommendations` | the fallback answer (used internally by the breaker) |
+
+**Run the dashboard**
+
+```bash
+cd dashboard
+npm install
+npm run dev        # opens on http://localhost:5173
+```
+
+Start the 5 backend services first (same order as Week 1). The
+dashboard reads from `http://localhost:8080`; to point it somewhere else,
+set `VITE_API_BASE`.
+
+**Demo script (Mid-Project Review)**
+
+1. All four health cards are green, recommendation badges say **LIVE**.
+2. Click **Fail (HTTP 500)**. Badges flip to **FALLBACK**. The product
+   list and stock keep working.
+3. Click **Send 12 at once**. After about 5 failures the breaker opens
+   and fallbacks come back in a few milliseconds.
+4. Click **Normal**. After about 10 seconds the breaker lets test calls
+   through and the badges return to **LIVE**.
+5. Stop recommendation-service in IntelliJ. The health card turns red,
+   but the storefront still loads (fallback data, no hanging).
 
 ## Coming in later weeks
 
-- **Week 2** — Resilience4j Circuit Breaker on the
-  recommendation-service route, a chaos endpoint to make that service
-  slow/fail on demand, a basic React Chaos Dashboard.
-- **Week 3** — Rate limiting + bulkheads on the gateway, ECharts-style
-  State Visualization (circuit breaker state: Closed/Open/Half-Open)
-  on the dashboard.
+- **Week 3** — Rate limiting and bulkheads on the gateway; the dashboard
+  shows the breaker state explicitly (Green = Closed, Red = Open,
+  Yellow = Half-Open).
 - **Week 4** — Distributed tracing (Micrometer + Zipkin) across the
-  gateway and services, final UI polish with a "Trigger Latency"
-  button to demo the breaker tripping live.
+  gateway and services, plus a "Trigger Latency" button in the dashboard
+  to show the breaker tripping live.
