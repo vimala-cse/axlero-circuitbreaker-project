@@ -9,13 +9,20 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8080'
 // service's /actuator/health (see the "health proxies" in the gateway's
 // application.yml). The gateway's own health is read directly.
 const SERVICES = [
-  { key: 'gateway', name: 'API Gateway', port: 8080, url: `${API_BASE}/actuator/health` },
-  { key: 'product', name: 'Product Service', port: 8081, url: `${API_BASE}/services/product/health` },
-  { key: 'inventory', name: 'Inventory Service', port: 8082, url: `${API_BASE}/services/inventory/health` },
-  { key: 'recommendation', name: 'Recommendation Service', port: 8083, url: `${API_BASE}/services/recommendation/health` },
+  { key: 'product', name: 'Product', host: 'product-service', port: 8081, url: `${API_BASE}/services/product/health` },
+  { key: 'inventory', name: 'Inventory', host: 'inventory-service', port: 8082, url: `${API_BASE}/services/inventory/health` },
+  {
+    key: 'recommendation',
+    name: 'Recommendation',
+    host: 'recommendation-service',
+    port: 8083,
+    url: `${API_BASE}/services/recommendation/health`,
+  },
+  { key: 'gateway', name: 'Gateway', host: 'api-gateway', port: 8080, url: `${API_BASE}/actuator/health` },
 ]
 
 const MAX_LOG_ROWS = 14
+const THEME_ORDER = ['auto', 'light', 'dark']
 
 // fetch() with a time limit, that never throws. Always returns an object
 // saying whether it worked, what came back and how long it took. A page
@@ -77,6 +84,37 @@ function Badge({ kind, children }) {
   return <span className={`badge badge-${kind}`}>{children}</span>
 }
 
+// One switch on the breaker panel. state: up | mid | down | idle.
+// Lever up = healthy, middle = answering with a fallback, down = not working.
+const STATE_WORD = { up: 'HEALTHY', mid: 'FALLBACK', down: 'DOWN', idle: 'CHECKING' }
+
+function Module({ name, host, port, state, word, rows, guard }) {
+  return (
+      <div className={`mod ${guard ? 'mod-guard' : ''}`}>
+        <div className="mod-title">
+          <h3>{name}</h3>
+          <div className="mod-host mono">
+            {host} :{port}
+          </div>
+        </div>
+        <div className={`lever lever-${state}`} role="img" aria-label={`${name}: ${word || STATE_WORD[state]}`}>
+          <i />
+        </div>
+        <div className="mod-read">
+        <span className={`tag tag-${state}`}>
+          <span className="lamp" aria-hidden="true" />
+          {word || STATE_WORD[state]}
+        </span>
+          {rows.map(([label, value]) => (
+              <span key={label}>
+            {label} <b className="mono">{value}</b>
+          </span>
+          ))}
+        </div>
+      </div>
+  )
+}
+
 export default function App() {
   const [health, setHealth] = useState({})
   const [products, setProducts] = useState([])
@@ -94,6 +132,15 @@ export default function App() {
   const [chaosError, setChaosError] = useState('')
   const [chaosBusy, setChaosBusy] = useState(false)
 
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cb-theme')
+      return saved === 'light' || saved === 'dark' ? saved : 'auto'
+    } catch {
+      return 'auto'
+    }
+  })
+
   // Refs let timers read the latest values without being re-created.
   const selectedRef = useRef(selected)
   const inFlight = useRef(false)
@@ -102,14 +149,31 @@ export default function App() {
     selectedRef.current = selected
   }, [selected])
 
+  // ---- Theme: auto follows the device, light / dark are the viewer's choice ----
+  useEffect(() => {
+    const root = document.documentElement
+    if (theme === 'auto') root.removeAttribute('data-theme')
+    else root.setAttribute('data-theme', theme)
+    try {
+      if (theme === 'auto') localStorage.removeItem('cb-theme')
+      else localStorage.setItem('cb-theme', theme)
+    } catch {
+      // storage can be blocked; the theme still works for this visit
+    }
+  }, [theme])
+
+  function nextTheme() {
+    setTheme((t) => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length])
+  }
+
   // ---- Service health: check all four every 3 seconds ----
   const checkHealth = useCallback(async () => {
     const results = await Promise.all(
-      SERVICES.map(async (svc) => {
-        const r = await timedFetch(svc.url, {}, 2500)
-        const up = r.ok && r.data && r.data.status === 'UP'
-        return [svc.key, { status: up ? 'UP' : 'DOWN', ms: r.ms }]
-      }),
+        SERVICES.map(async (svc) => {
+          const r = await timedFetch(svc.url, {}, 2500)
+          const up = r.ok && r.data && r.data.status === 'UP'
+          return [svc.key, { status: up ? 'UP' : 'DOWN', ms: r.ms }]
+        }),
     )
     setHealth(Object.fromEntries(results))
   }, [])
@@ -185,10 +249,10 @@ export default function App() {
     }
     setCounts((c) => ({ ...c, [kind]: c[kind] + 1 }))
     setLog((rows) =>
-      [{ id: now.getTime() + Math.random(), at: now, product: productId, kind, ms: r.ms, status: r.status }, ...rows].slice(
-        0,
-        MAX_LOG_ROWS,
-      ),
+        [{ id: now.getTime() + Math.random(), at: now, product: productId, kind, ms: r.ms, status: r.status }, ...rows].slice(
+            0,
+            MAX_LOG_ROWS,
+        ),
     )
     return kind
   }, [])
@@ -227,192 +291,227 @@ export default function App() {
   }
 
   const gatewayUp = health.gateway && health.gateway.status === 'UP'
+  const recDown = health.recommendation && health.recommendation.status === 'DOWN'
   const selectedProduct = products.find((p) => p.id === selected)
   const totalCalls = counts.live + counts.fallback + counts.error
 
-  return (
-    <div className="app">
-      <header className="topbar">
-        <div>
-          <h1>CircuitBreaker Dashboard</h1>
-          <p className="subtitle">Cloud-native e-commerce API gateway: watch the site survive a failing service</p>
-        </div>
-        <div className={`gateway-pill ${gatewayUp ? 'pill-up' : 'pill-down'}`}>
-          <span className="dot" />
-          {gatewayUp ? 'Gateway online' : 'Gateway unreachable'}
-        </div>
-      </header>
+  // The headline tells the story in one sentence, based on what is happening now.
+  let headline = 'All services healthy'
+  let subline = 'Every request goes through the gateway. Recommendations are live.'
+  if (health.gateway && !gatewayUp) {
+    headline = 'The gateway is unreachable'
+    subline = 'Start api-gateway in IntelliJ and wait a few seconds. This page reconnects by itself.'
+  } else if (rec && rec.kind === 'fallback') {
+    headline = recDown ? 'Recommendation service is down. The store keeps selling.' : 'Fallback mode. The store keeps selling.'
+    subline = 'Shoppers see Top Sellers instead of personal picks. Products and stock are not affected.'
+  } else if (recDown) {
+    headline = 'Recommendation service is down'
+    subline = 'The next request will show whether the gateway has switched to the fallback.'
+  } else if (chaos && chaos.mode !== 'normal') {
+    headline = 'Recommendations are under stress'
+    subline = 'The breaker is judging the last 10 calls. At 50% failures or slow calls, it opens.'
+  }
 
-      <main>
-        {/* ---------------- Service health ---------------- */}
-        <section className="panel">
-          <h2>Service health</h2>
-          <div className="health-grid">
+  // Panel state for each service.
+  function moduleState(svc) {
+    const h = health[svc.key]
+    if (!h) return { state: 'idle', word: undefined, rows: [['Health check', '...']] }
+    if (h.status === 'DOWN') return { state: 'down', word: undefined, rows: [['Health check', `${h.ms} ms`]] }
+    if (svc.key === 'recommendation' && rec) {
+      if (rec.kind === 'fallback') return { state: 'mid', word: 'FALLBACK', rows: [['Last answer', `${rec.ms} ms`]] }
+      if (rec.kind === 'error') return { state: 'down', word: 'NO ANSWER', rows: [['Last answer', `${rec.ms} ms`]] }
+      return { state: 'up', word: 'LIVE', rows: [['Last answer', `${rec.ms} ms`]] }
+    }
+    return { state: 'up', word: undefined, rows: [['Health check', `${h.ms} ms`]] }
+  }
+
+  const MODES = [
+    { key: 'normal', label: 'Normal' },
+    { key: 'slow', label: 'Slow (4 s)' },
+    { key: 'fail', label: 'Fail (500)' },
+  ]
+
+  return (
+      <div className="app">
+        <header className="topbar">
+          <div className="brand">
+            <b>CircuitBreaker</b>
+            <span>Console</span>
+          </div>
+          <div className="chips">
+          <span className="chip">
+            <span className={`lamp ${gatewayUp ? 'lamp-up' : health.gateway ? 'lamp-down' : 'lamp-idle'}`} aria-hidden="true" />
+            {gatewayUp ? 'Gateway online' : health.gateway ? 'Gateway unreachable' : 'Connecting'}
+          </span>
+            <button className="chip chip-btn" onClick={nextTheme} aria-label={`Theme: ${theme}. Press to change.`}>
+              Theme: {theme === 'auto' ? 'Auto' : theme === 'light' ? 'Light' : 'Dark'}
+            </button>
+          </div>
+        </header>
+
+        <section className="headline" aria-live="polite">
+          <h1>{headline}</h1>
+          <p>{subline}</p>
+        </section>
+
+        {/* ---------------- Breaker panel: service health ---------------- */}
+        <section className="board" aria-label="Service health">
+          <div className="board-head">
+            <h2>Breaker panel</h2>
+            <span>Lever up: healthy. Middle: fallback. Down: not working.</span>
+          </div>
+          <div className="mods">
             {SERVICES.map((svc) => {
-              const h = health[svc.key]
-              const status = h ? h.status : 'CHECKING'
+              const m = moduleState(svc)
               return (
-                <div key={svc.key} className={`health-card health-${status.toLowerCase()}`}>
-                  <div className="health-name">{svc.name}</div>
-                  <div className="health-port">port {svc.port}</div>
-                  <div className="health-row">
-                    <Badge kind={status === 'UP' ? 'live' : status === 'DOWN' ? 'error' : 'idle'}>{status}</Badge>
-                    <span className="muted">{h ? `${h.ms} ms` : '...'}</span>
-                  </div>
-                </div>
+                  <Module
+                      key={svc.key}
+                      name={svc.name}
+                      host={svc.host}
+                      port={svc.port}
+                      state={m.state}
+                      word={m.word}
+                      rows={m.rows}
+                      guard={svc.key === 'recommendation'}
+                  />
               )
             })}
           </div>
         </section>
 
-        <div className="two-col">
+        <div className="row">
           {/* ---------------- Chaos control ---------------- */}
-          <section className="panel">
-            <h2>Chaos control</h2>
-            <p className="hint">
-              Break the Recommendation service on purpose, then watch the gateway protect the rest of the site.
+          <section className="card">
+            <h2>Break something on purpose</h2>
+            <p className="sub">Change how the Recommendation service behaves. No restart needed.</p>
+            <div className="seg" role="group" aria-label="Chaos mode">
+              {MODES.map((m) => (
+                  <button
+                      key={m.key}
+                      disabled={chaosBusy || !chaos}
+                      aria-pressed={chaos ? chaos.mode === m.key : false}
+                      onClick={() => changeChaos(m.key)}
+                  >
+                    {m.label}
+                  </button>
+              ))}
+            </div>
+            <p className="sub">
+              Current mode: <b>{chaos ? chaos.mode : 'unknown'}</b>
             </p>
-            <div className="chaos-current">
-              Current mode:{' '}
-              {chaos ? (
-                <strong className={`mode mode-${chaos.mode}`}>{chaos.mode.toUpperCase()}</strong>
-              ) : (
-                <strong className="mode mode-unknown">UNKNOWN</strong>
-              )}
-            </div>
-            <div className="button-row">
-              <button className="btn btn-ok" disabled={chaosBusy} onClick={() => changeChaos('normal')}>
-                Normal
-              </button>
-              <button className="btn btn-warn" disabled={chaosBusy} onClick={() => changeChaos('slow')}>
-                Slow (4 s delay)
-              </button>
-              <button className="btn btn-bad" disabled={chaosBusy} onClick={() => changeChaos('fail')}>
-                Fail (HTTP 500)
-              </button>
-            </div>
             {chaosError && <p className="error-text">{chaosError}</p>}
-            <p className="hint small">
-              Tip: you can also stop the Recommendation service in IntelliJ. The storefront below should keep working
-              either way.
+            <div className="actions">
+              <button className="btn btn-main" onClick={sendBurst} disabled={bursting}>
+                {bursting ? 'Sending...' : 'Send 12 at once'}
+              </button>
+              <label className="toggle">
+                <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+                Auto-refresh every 2 s
+              </label>
+            </div>
+            <p className="foot">
+              Try it: choose Fail, press Send 12 at once, then choose Normal and wait about 10 seconds. You can also stop the
+              Recommendation service in IntelliJ.
             </p>
           </section>
 
           {/* ---------------- Request log ---------------- */}
-          <section className="panel">
-            <div className="panel-head">
-              <h2>Recommendation requests</h2>
-              <div className="button-row tight">
-                <button className="btn btn-ghost" onClick={sendBurst} disabled={bursting}>
-                  {bursting ? 'Sending...' : 'Send 12 at once'}
-                </button>
-                <button className="btn btn-ghost" onClick={resetLog}>
-                  Clear
-                </button>
-              </div>
+          <section className="card">
+            <div className="card-head">
+              <h2>Live requests</h2>
+              <button className="btn btn-quiet" onClick={resetLog}>
+                Clear
+              </button>
             </div>
             <div className="counts">
-              <div className="count count-live">
-                <span className="count-num">{counts.live}</span>
-                <span className="count-label">live</span>
-              </div>
-              <div className="count count-fallback">
-                <span className="count-num">{counts.fallback}</span>
-                <span className="count-label">fallback</span>
-              </div>
-              <div className="count count-error">
-                <span className="count-num">{counts.error}</span>
-                <span className="count-label">error</span>
+              <div className="count">
+                <b>{counts.live}</b>
+                <span>Live</span>
               </div>
               <div className="count">
-                <span className="count-num">{totalCalls}</span>
-                <span className="count-label">total</span>
+                <b>{counts.fallback}</b>
+                <span>Fallback</span>
+              </div>
+              <div className="count">
+                <b>{counts.error}</b>
+                <span>Error</span>
+              </div>
+              <div className="count">
+                <b>{totalCalls}</b>
+                <span>Total</span>
               </div>
             </div>
             <ul className="log">
-              {log.length === 0 && <li className="muted">No requests yet.</li>}
+              {log.length === 0 && <li className="empty">No requests yet. Pick a product or press Send 12 at once.</li>}
               {log.map((row) => (
-                <li key={row.id} className="log-row">
-                  <span className="muted mono">{formatTime(row.at)}</span>
-                  <span className="mono">{row.product}</span>
-                  <Badge kind={row.kind}>{KIND_LABEL[row.kind]}</Badge>
-                  <span className="mono log-ms">{row.ms} ms</span>
-                </li>
+                  <li key={row.id}>
+                    <span className="mono dim">{formatTime(row.at)}</span>
+                    <span className="mono">{row.product}</span>
+                    <Badge kind={row.kind}>{KIND_LABEL[row.kind]}</Badge>
+                    <span className="mono dim ms">{row.ms} ms</span>
+                  </li>
               ))}
             </ul>
           </section>
         </div>
 
         {/* ---------------- Storefront preview ---------------- */}
-        <section className="panel">
-          <div className="panel-head">
-            <h2>Storefront preview</h2>
-            <label className="toggle">
-              <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
-              Auto-refresh recommendations
-            </label>
-          </div>
+        <section className="card">
+          <h2>What the shopper sees</h2>
+          <p className="sub">Pick a product to load its recommendations.</p>
 
           {catalogError && (
-            <p className="error-text">The catalog is not responding. Check that product-service and inventory-service are running.</p>
+              <p className="error-text">The catalog is not responding. Check that product-service and inventory-service are running.</p>
           )}
 
-          <div className="product-grid">
-            {products.length === 0 && !catalogError && <p className="muted">Loading products...</p>}
+          <div className="shop">
+            {products.length === 0 && !catalogError && <p className="sub">Loading products...</p>}
             {products.map((p) => {
               const qty = stock[p.id]
               return (
-                <button
-                  key={p.id}
-                  className={`product-card ${p.id === selected ? 'product-selected' : ''}`}
-                  onClick={() => setSelected(p.id)}
-                >
-                  <span className="product-cat">{p.category}</span>
-                  <span className="product-name">{p.name}</span>
-                  <span className="product-price">{rupees(p.price)}</span>
-                  <span className={`stock ${qty === 0 ? 'stock-out' : ''}`}>
-                    {qty === undefined ? 'stock unknown' : qty === 0 ? 'Out of stock' : `${qty} in stock`}
-                  </span>
-                </button>
+                  <button key={p.id} className="prod" aria-pressed={p.id === selected} onClick={() => setSelected(p.id)}>
+                    <span className="cat">{p.category}</span>
+                    <span className="n">{p.name}</span>
+                    <span className="p mono">{rupees(p.price)}</span>
+                    <span className={`stock ${qty === 0 ? 'out' : ''}`}>
+                  {qty === undefined ? 'Stock unknown' : qty === 0 ? 'Out of stock' : `${qty} in stock`}
+                </span>
+                  </button>
               )
             })}
           </div>
 
-          <div className="rec-box">
-            <div className="rec-head">
-              <h3>You may also like{selectedProduct ? ` (with ${selectedProduct.name})` : ''}</h3>
-              {rec && <Badge kind={rec.kind}>{KIND_LABEL[rec.kind]}</Badge>}
-              {rec && <span className="muted mono">{rec.ms} ms</span>}
+          <div className="rec">
+            <div className="rec-top">
+              <h3>You may also like{selectedProduct ? `, with ${selectedProduct.name}` : ''}</h3>
+              {rec && <Badge kind={rec.kind}>{rec.kind === 'fallback' ? 'TOP SELLERS' : KIND_LABEL[rec.kind]}</Badge>}
+              {rec && <span className="sub mono">{rec.ms} ms</span>}
             </div>
 
-            {!rec && <p className="muted">Waiting for the first answer...</p>}
+            {!rec && <p className="sub">Waiting for the first answer...</p>}
 
             {rec && rec.kind !== 'error' && (
-              <div className="chips">
-                {rec.items.map((id) => (
-                  <span key={id} className="chip">
-                    {nameOf(id)}
-                  </span>
-                ))}
-              </div>
+                <div className="rchips">
+                  {rec.items.map((id) => (
+                      <span key={id} className="rchip">
+                  {nameOf(id)}
+                </span>
+                  ))}
+                </div>
             )}
 
             {rec && rec.kind === 'fallback' && (
-              <p className="hint">
-                {rec.message || 'The gateway served a safe fallback (Top Sellers) instead of waiting on the failing service.'}
-              </p>
+                <p className="sub">
+                  {rec.message || 'The gateway served a safe fallback (Top Sellers) instead of waiting on the failing service.'}
+                </p>
             )}
-            {rec && rec.kind === 'error' && (
-              <p className="error-text">Could not get recommendations from the gateway at all.</p>
-            )}
-
-            <p className="hint small">
-              <strong>LIVE</strong> = answered by the Recommendation service. <strong>FALLBACK</strong> = the gateway
-              answered with Top Sellers because the service was slow, failing or the breaker was open.
-            </p>
+            {rec && rec.kind === 'error' && <p className="error-text">Could not get recommendations from the gateway at all.</p>}
           </div>
+          <p className="foot">
+            LIVE means the Recommendation service answered. FALLBACK means the gateway answered with Top Sellers because the
+            service was slow, failing or the breaker was open.
+          </p>
         </section>
-      </main>
-    </div>
+      </div>
   )
 }
