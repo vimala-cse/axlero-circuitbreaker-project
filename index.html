@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080b12" />
+    <meta name="description" content="CircuitBreaker gateway and microservice resilience dashboard." />
+    <title>CircuitBreaker · Gateway console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Main navigation">
+        <a class="brand" href="#overview" aria-label="CircuitBreaker home">
+          <span class="brand-mark" aria-hidden="true">ϟ</span>
+          <span class="brand-name">circuit<span>breaker</span></span>
+        </a>
+        <div class="workspace-label">WORKSPACE</div>
+        <button class="workspace-switcher" type="button"><span class="workspace-avatar">A</span><span class="workspace-copy"><strong>Axlero Commerce</strong><small>Production environment</small></span><span class="chevron">⌄</span></button>
+        <nav class="nav-group">
+          <a class="nav-link active" href="#overview"><span class="nav-icon">◫</span>Overview</a>
+          <a class="nav-link" href="#services"><span class="nav-icon">⌘</span>Services<span class="nav-count" id="nav-service-count">6</span></a>
+          <a class="nav-link" href="#breakers"><span class="nav-icon">⏣</span>Circuit breakers<span class="nav-dot" aria-label="one open"></span></a>
+          <a class="nav-link" href="#traffic"><span class="nav-icon">⌁</span>Traffic</a>
+          <a class="nav-link" href="#events"><span class="nav-icon">◷</span>Event log<span class="nav-count">4</span></a>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="cluster-card"><div class="cluster-top"><span class="live-indicator"></span><span>CLUSTER STATUS</span><span class="cluster-healthy">HEALTHY</span></div><div class="cluster-nodes"><span class="node-dot"></span><span class="node-dot"></span><span class="node-dot"></span><span class="node-dot"></span><span class="node-dot"></span><span class="node-dot"></span><span class="mono">6 / 6 nodes</span></div><div class="cluster-foot">Eureka discovery <span>·</span> us-east-1</div></div>
+          <button class="profile-button" type="button"><span class="profile-avatar">SC</span><span class="profile-copy"><strong>Sam Chou</strong><small>Platform engineer</small></span><span class="profile-menu">···</span></button>
+        </div>
+      </aside>
+
+      <main class="main-content" id="overview">
+        <header class="topbar"><div class="breadcrumbs">Axlero Commerce <span>/</span> <strong>Overview</strong></div><div class="topbar-actions"><span class="environment-pill"><span></span> Production</span><button class="icon-button" type="button" aria-label="Notifications">♧<i></i></button><span class="topbar-divider"></span><button class="help-button" type="button">? <span>Help</span></button></div></header>
+        <section class="page-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span>GATEWAY CONTROL PLANE</div><h1>System overview<span class="heading-period">.</span></h1><p class="page-subtitle">A real-time view of your gateway, services, and resilience patterns.</p></div><div class="heading-meta"><span class="live-indicator"></span><span>Live updates</span><span class="meta-divider"></span><span>Last refreshed <strong id="last-refreshed">just now</strong></span></div></section>
+
+        <section class="metric-grid" aria-label="Gateway metrics">
+          <article class="metric-card"><div class="metric-heading"><span>REQUESTS / MIN</span><span class="metric-icon teal-icon">↗</span></div><div class="metric-value" id="requests-value">24,891</div><div class="metric-foot"><span class="trend-positive">↗ 12.8%</span><span>vs. previous hour</span><svg class="sparkline" viewBox="0 0 92 28" aria-label="Requests trending upward"><path d="M1 22 C10 20 12 13 20 17 S31 23 38 14 S49 10 56 15 S68 7 75 11 S84 7 91 3" /></svg></div></article>
+          <article class="metric-card"><div class="metric-heading"><span>AVG. LATENCY</span><span class="metric-icon violet-icon">◷</span></div><div class="metric-value"><span id="latency-value">42</span><span class="metric-unit">ms</span></div><div class="metric-foot"><span class="trend-positive">↓ 8.2%</span><span>vs. previous hour</span><svg class="sparkline violet-line" viewBox="0 0 92 28" aria-label="Latency trending down"><path d="M1 4 C10 7 12 10 20 7 S31 9 38 15 S49 11 56 14 S68 19 75 16 S84 22 91 23" /></svg></div></article>
+          <article class="metric-card"><div class="metric-heading"><span>SUCCESS RATE</span><span class="metric-icon green-icon">✓</span></div><div class="metric-value"><span id="success-value">99.94</span><span class="metric-unit">%</span></div><div class="metric-foot"><span class="trend-positive">↗ 0.03%</span><span>vs. previous hour</span><svg class="sparkline green-line" viewBox="0 0 92 28" aria-label="Success rate stable"><path d="M1 16 C10 14 12 18 20 15 S31 16 38 12 S49 16 56 12 S68 14 75 9 S84 11 91 7" /></svg></div></article>
+          <article class="metric-card metric-alert"><div class="metric-heading"><span>OPEN BREAKERS</span><span class="metric-icon orange-icon">ϟ</span></div><div class="metric-value" id="open-breaker-value">1<span class="metric-unit">/ 6</span></div><div class="metric-foot"><span class="trend-warning">● Needs attention</span><span>Recommendation Engine</span></div></article>
+        </section>
+
+        <section class="content-grid">
+          <article class="panel traffic-panel" id="traffic"><div class="panel-header"><div><div class="panel-kicker">GATEWAY</div><h2>Traffic overview</h2></div><div class="panel-controls"><span class="panel-legend"><i class="legend-dot requests-dot"></i>Requests <i class="legend-dot errors-dot"></i>Errors</span><select id="traffic-range" class="range-select" aria-label="Traffic time range"><option value="1h">Last hour</option><option value="6h">Last 6 hours</option><option value="24h">Last 24 hours</option></select></div></div><div class="chart-summary"><strong id="chart-total">24,891</strong><span>requests</span><span class="chart-summary-divider"></span><span class="chart-error"><i></i> 0.06% error rate</span></div><div class="traffic-chart" id="traffic-chart" role="img" aria-label="Requests and errors over the last hour"></div><div class="chart-axis"><span>09:00</span><span>09:10</span><span>09:20</span><span>09:30</span><span>09:40</span><span>09:50</span><span>10:00</span></div></article>
+
+          <article class="panel breaker-panel" id="breakers"><div class="panel-header"><div><div class="panel-kicker">RESILIENCE4J</div><h2>Circuit breakers</h2></div><button class="text-button" type="button" data-scroll="services">View all <span>→</span></button></div><div class="breaker-hero"><div class="breaker-gauge" aria-label="One circuit breaker open out of six"><div><strong id="breaker-count">1</strong><span>of 6 open</span></div></div><div class="breaker-status-copy"><span class="status-pill status-open"><i></i>OPEN</span><h3>Recommendation Engine</h3><p>Opened <span id="opened-at">2m 14s</span> ago after consecutive timeouts.</p><button class="outline-button" type="button" id="reset-breaker">↻ &nbsp; Reset breaker</button></div></div><div class="breaker-stats"><div><span>FAILED CALLS</span><strong id="failed-calls">142</strong></div><div><span>FAILURE THRESHOLD</span><strong>50%</strong></div><div><span>WAIT DURATION</span><strong>30 sec</strong></div></div></article>
+        </section>
+
+        <section class="panel services-panel" id="services"><div class="panel-header services-header"><div><div class="panel-kicker">EUREKA SERVICE DISCOVERY</div><h2>Microservices <span class="service-count" id="service-count">6 services</span></h2></div><div class="service-actions"><label class="search-box"><span>⌕</span><input id="service-search" type="search" placeholder="Search services" aria-label="Search services" /></label><select id="service-filter" class="range-select" aria-label="Filter services"><option value="all">All statuses</option><option value="healthy">Healthy</option><option value="degraded">Degraded</option><option value="open">Circuit open</option></select><button class="icon-button refresh-button" type="button" id="refresh-services" aria-label="Refresh services">↻</button></div></div><div class="table-wrap"><table><thead><tr><th>SERVICE</th><th>STATUS</th><th>INSTANCES</th><th>AVG. LATENCY</th><th>REQUESTS / MIN</th><th>BREAKER</th><th></th></tr></thead><tbody id="service-rows"></tbody></table><div class="empty-state" id="empty-state" hidden>No services match your search.</div></div><div class="table-footer"><span>Showing <strong id="showing-count">6</strong> of 6 services</span><span>Registry synced <strong>just now</strong> <i class="live-indicator"></i></span></div></section>
+
+        <section class="panel events-panel" id="events"><div class="panel-header"><div><div class="panel-kicker">LIVE ACTIVITY</div><h2>Recent events</h2></div><button class="text-button" type="button">Event log <span>→</span></button></div><div class="event-list" id="event-list"></div></section>
+        <footer class="page-footer"><span><span class="footer-mark">ϟ</span> CIRCUITBREAKER <span class="footer-separator">/</span> GATEWAY CONSOLE</span><span>Built for resilience. <span class="footer-heart">♥</span></span></footer>
+      </main>
+    </div>
+  </body>
+</html>
