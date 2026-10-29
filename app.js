@@ -19,7 +19,14 @@ const serviceRows = document.querySelector('#service-rows');
 const eventList = document.querySelector('#event-list');
 
 function renderServices() {
-  serviceRows.innerHTML = services.map((service) => {
+  const query = document.querySelector('#service-search').value.trim().toLowerCase();
+  const statusFilter = document.querySelector('#service-filter').value;
+  const filteredServices = services.filter((service) => {
+    const matchesQuery = `${service.name} ${service.detail}`.toLowerCase().includes(query);
+    const matchesStatus = statusFilter === 'all' || (statusFilter === 'open' ? service.breaker === 'OPEN' : service.status === statusFilter);
+    return matchesQuery && matchesStatus;
+  });
+  serviceRows.innerHTML = filteredServices.map((service) => {
     const healthLabel = service.status === 'degraded' ? 'Degraded' : 'Healthy';
     const breakerClass = service.breaker === 'OPEN' ? 'open' : service.breaker === 'HALF-OPEN' ? 'half' : '';
     const latencyClass = service.latency > 150 ? 'slow' : '';
@@ -33,9 +40,10 @@ function renderServices() {
       <td><button class="row-menu" type="button" aria-label="Actions for ${service.name}">···</button></td>
     </tr>`;
   }).join('');
+  document.querySelector('#empty-state').hidden = filteredServices.length > 0;
   document.querySelector('#service-count').textContent = `${services.length} services`;
   document.querySelector('#nav-service-count').textContent = services.length;
-  document.querySelector('#showing-count').textContent = services.length;
+  document.querySelector('#showing-count').textContent = filteredServices.length;
 }
 
 function chartPath(values, width, height, max) {
@@ -64,3 +72,65 @@ function renderEvents() {
 renderServices();
 renderTrafficChart();
 renderEvents();
+
+document.querySelector('#service-search').addEventListener('input', renderServices);
+document.querySelector('#service-filter').addEventListener('change', renderServices);
+
+document.querySelector('#refresh-services').addEventListener('click', (event) => {
+  const button = event.currentTarget;
+  button.classList.remove('spinning');
+  requestAnimationFrame(() => button.classList.add('spinning'));
+  document.querySelector('#last-refreshed').textContent = 'just now';
+  window.setTimeout(() => button.classList.remove('spinning'), 650);
+});
+
+document.querySelector('#traffic-range').addEventListener('change', (event) => {
+  const range = event.target.value;
+  const labels = range === '24h'
+    ? ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00']
+    : range === '6h'
+      ? ['04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00']
+      : ['09:00', '09:10', '09:20', '09:30', '09:40', '09:50', '10:00'];
+  document.querySelector('.chart-axis').innerHTML = labels.map((label) => `<span>${label}</span>`).join('');
+  document.querySelector('.chart-error').innerHTML = `<i></i> ${range === '24h' ? '0.08%' : range === '6h' ? '0.07%' : '0.06%'} error rate`;
+});
+
+document.querySelector('#reset-breaker').addEventListener('click', () => {
+  const recommendation = services.find((service) => service.id === 'recommendation');
+  recommendation.breaker = 'HALF-OPEN';
+  recommendation.status = 'healthy';
+  recommendation.latency = 96;
+  recommendation.instances = '2 / 2';
+  renderServices();
+  document.querySelector('#open-breaker-value').innerHTML = '0<span class="metric-unit">/ 6</span>';
+  document.querySelector('#breaker-count').textContent = '0';
+  document.querySelector('.breaker-gauge').style.background = 'radial-gradient(circle at center,#10141d 58%,transparent 60%),conic-gradient(from -90deg,var(--green) 0 60deg,#29303c 60deg 360deg)';
+  const status = document.querySelector('.breaker-status-copy .status-pill');
+  status.className = 'status-pill status-half';
+  status.innerHTML = '<i></i> HALF-OPEN';
+  document.querySelector('.breaker-status-copy h3').textContent = 'Recommendation Engine';
+  document.querySelector('.breaker-status-copy p').textContent = 'Manual reset sent. Waiting for the next health probe.';
+  document.querySelector('#reset-breaker').textContent = '✓  Probe in progress';
+  document.querySelector('#reset-breaker').disabled = true;
+  document.querySelector('#reset-breaker').style.opacity = '.7';
+  events.unshift({ icon: '↻', tone: 'success', title: 'Circuit breaker manually reset', target: 'Recommendation Engine', detail: 'State changed to half-open · waiting for a health probe', time: 'just now' });
+  renderEvents();
+});
+
+document.querySelectorAll('[data-scroll]').forEach((button) => {
+  button.addEventListener('click', () => document.getElementById(button.dataset.scroll)?.scrollIntoView({ behavior: 'smooth' }));
+});
+
+document.querySelectorAll('.nav-link').forEach((link) => {
+  link.addEventListener('click', () => {
+    document.querySelectorAll('.nav-link').forEach((item) => item.classList.remove('active'));
+    link.classList.add('active');
+  });
+});
+
+window.setInterval(() => {
+  const requests = 24891 + Math.floor(Math.random() * 24);
+  document.querySelector('#requests-value').textContent = number(requests);
+  document.querySelector('#chart-total').textContent = number(requests);
+  document.querySelector('#last-refreshed').textContent = 'just now';
+}, 5000);
