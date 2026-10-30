@@ -1,0 +1,72 @@
+/* Shared visual system */
+:root {
+  --bg: #090d15;
+  --sidebar: #0b101a;
+  --panel: #111824;
+  --panel-hi: #172131;
+  --line: #263143;
+  --line-soft: #202a39;
+  --text: #f0f4fb;
+  --muted: #929db0;
+  --subtle: #657187;
+  --teal: #72e2ce;
+  --green: #72dfa9;
+  --amber: #ffc574;
+  --red: #ff8585;
+  --violet: #baa7ff;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 80% -15%, #172a3952 0, transparent 48%),
+    radial-gradient(ellipse at 58% 46%, #19182a24 0, transparent 48%),
+    var(--bg);
+}
+
+.sidebar {
+  background: linear-gradient(180deg, #0d1420 0%, #0a0f18 75%);
+  border-right-color: #202b3a;
+  box-shadow: 12px 0 35px #03060a26;
+}
+
+.brand-mark {
+  color: #081315;
+  background: linear-gradient(145deg, #89f0d8, #65bed9 58%, #a88cff);
+  box-shadow: 0 0 24px #70dccc35, inset 0 1px #ffffff85;
+}
+
+.brand-name { letter-spacing: -.8px; }
+.brand-name span { color: #9ba8bb; }
+
+.workspace-switcher {
+  border-color: #283445;
+  background: linear-gradient(145deg, #151e2b, #101722);
+  box-shadow: inset 0 1px #ffffff08;
+}
+
+.nav-link { transition: color .2s ease, background .2s ease, transform .2s ease; }
+.nav-link:hover { transform: translateX(2px); }
+.nav-link.active {
+  color: #e9fffb;
+  background: linear-gradient(100deg, #183a3a, #14252e 72%, #151d29);
+  box-shadow: inset 2px 0 var(--teal), inset 0 1px #ffffff08;
+}
+
+.cluster-card {
+  border-color: #2a3744;
+  background: linear-gradient(150deg, #141f29, #101720);
+  box-shadow: inset 0 1px #ffffff08;
+}
+
+.topbar {
+  border-bottom-color: #202a38;
+  background: linear-gradient(90deg, #090d15cc, #090d1566);
+}
+
+.environment-pill {
+  border-color: #315846;
+  background: #152a20;
+  color: #a7ebc4;
+}
+
+.page-footer { border-top: 1px solid #1d2735; }
