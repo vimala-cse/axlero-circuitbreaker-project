@@ -277,3 +277,41 @@ h1 {
 .event-time { color: #8a97aa; font-size: 9px; }
 .text-button { color: #b0bdcd; }
 .text-button:hover { color: var(--teal); }
+
+/* Clear feedback for local dashboard actions */
+.toast-viewport {
+  position: fixed;
+  z-index: 20;
+  right: 24px;
+  bottom: 22px;
+  pointer-events: none;
+}
+.toast-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 265px;
+  max-width: min(380px, calc(100vw - 34px));
+  padding: 13px 16px;
+  border: 1px solid #355348;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #1a2b29, #121d22);
+  color: #e9f7f1;
+  box-shadow: 0 14px 40px #02060bb8, inset 0 1px #ffffff13;
+  opacity: 0;
+  transform: translateY(10px) scale(.98);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.toast-card.visible { opacity: 1; transform: translateY(0) scale(1); }
+.toast-check {
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  flex: 0 0 23px;
+  border-radius: 50%;
+  background: #1d4834;
+  color: #9af0bd;
+  font-size: 12px;
+}
+.toast-message { font-size: 11px; font-weight: 500; }
