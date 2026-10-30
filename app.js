@@ -17,6 +17,22 @@ const events = [
 const number = (value) => new Intl.NumberFormat('en-US').format(value);
 const serviceRows = document.querySelector('#service-rows');
 const eventList = document.querySelector('#event-list');
+const toastViewport = document.querySelector('#toast-viewport');
+let toastTimer;
+
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.className = 'toast-card';
+  toast.innerHTML = '<span class="toast-check" aria-hidden="true">✓</span><span class="toast-message"></span>';
+  toast.querySelector('.toast-message').textContent = message;
+  toastViewport.replaceChildren(toast);
+  requestAnimationFrame(() => toast.classList.add('visible'));
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(() => {
+    toast.classList.remove('visible');
+    window.setTimeout(() => toast.remove(), 220);
+  }, 2800);
+}
 
 function renderServices() {
   const query = document.querySelector('#service-search').value.trim().toLowerCase();
@@ -82,6 +98,7 @@ document.querySelector('#refresh-services').addEventListener('click', (event) =>
   requestAnimationFrame(() => button.classList.add('spinning'));
   document.querySelector('#last-refreshed').textContent = 'just now';
   window.setTimeout(() => button.classList.remove('spinning'), 650);
+  showToast('Demo service registry is up to date');
 });
 
 document.querySelector('#traffic-range').addEventListener('change', (event) => {
@@ -115,6 +132,7 @@ document.querySelector('#reset-breaker').addEventListener('click', () => {
   document.querySelector('#reset-breaker').style.opacity = '.7';
   events.unshift({ icon: '↻', tone: 'success', title: 'Circuit breaker manually reset', target: 'Recommendation Engine', detail: 'State changed to half-open · waiting for a health probe', time: 'just now' });
   renderEvents();
+  showToast('Recommendation Engine is half-open');
 });
 
 document.querySelectorAll('[data-scroll]').forEach((button) => {
