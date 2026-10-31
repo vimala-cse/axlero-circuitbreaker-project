@@ -3,20 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#27323C" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='28' y='8' width='44' height='84' rx='10' fill='%2327323C'/%3E%3Crect x='34' y='14' width='32' height='36' rx='7' fill='%231E9E63'/%3E%3C/svg%3E" />
+    <title>CircuitBreaker</title>
+    <meta name="theme-color" content="#f4f7fb" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232557e6'/%3E%3Cpath d='M9 17h5l2-6 3 10 2-4h3' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
-    />
-    <title>CircuitBreaker Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <script>
-      // Apply a saved theme before the page paints, so there is no flash.
+      // Apply the saved theme before first paint, so there is no flash.
       try {
-        var saved = localStorage.getItem('cb-theme')
-        if (saved === 'light' || saved === 'dark') document.documentElement.setAttribute('data-theme', saved)
+        var t = localStorage.getItem('cb-theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
       } catch (e) {}
     </script>
   </head>
