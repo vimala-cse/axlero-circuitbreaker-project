@@ -140,6 +140,10 @@ document.querySelector('#reset-breaker').addEventListener('click', () => {
   renderServices();
   document.querySelector('#open-breaker-value').innerHTML = '0<span class="metric-unit">/ 6</span>';
   document.querySelector('#breaker-count').textContent = '0';
+  document.querySelector('.breaker-gauge').setAttribute('aria-label', 'Zero circuit breakers open out of six');
+  const breakerNavDot = document.querySelector('.nav-dot');
+  breakerNavDot.hidden = true;
+  breakerNavDot.removeAttribute('aria-label');
   document.querySelector('.breaker-gauge').style.background = 'radial-gradient(circle at center,#10141d 58%,transparent 60%),conic-gradient(from -90deg,var(--green) 0 60deg,#29303c 60deg 360deg)';
   const status = document.querySelector('.breaker-status-copy .status-pill');
   status.className = 'status-pill status-half';
@@ -148,9 +152,9 @@ document.querySelector('#reset-breaker').addEventListener('click', () => {
   document.querySelector('.breaker-status-copy p').textContent = 'Manual reset sent. Waiting for the next health probe.';
   document.querySelector('#reset-breaker').textContent = '✓  Probe in progress';
   document.querySelector('#reset-breaker').disabled = true;
-  document.querySelector('#reset-breaker').style.opacity = '.7';
   events.unshift({ icon: '↻', tone: 'success', title: 'Circuit breaker manually reset', target: 'Recommendation Engine', detail: 'State changed to half-open · waiting for a health probe', time: 'just now' });
   renderEvents();
+  document.querySelector('#nav-event-count').textContent = events.length;
   showToast('Recommendation Engine is half-open');
 });
 
