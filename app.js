@@ -70,15 +70,32 @@ function chartPath(values, width, height, max) {
   }).join(' ');
 }
 
-function renderTrafficChart() {
-  const requests = [46, 52, 44, 62, 53, 66, 71, 61, 76, 68, 82, 73, 84, 76, 91, 80, 89, 77, 94, 85, 97, 87, 100, 88, 96, 82, 94, 79, 89, 72, 85, 75, 92, 79, 96, 84, 98, 89, 100, 91];
-  const errors = [3, 4, 3, 6, 4, 5, 4, 7, 4, 3, 5, 7, 4, 6, 4, 5, 3, 6, 5, 4, 6, 4, 3, 5, 7, 4, 6, 3, 5, 4, 7, 5, 4, 6, 4, 5, 3, 5, 4, 6];
+const trafficSeries = {
+  '1h': {
+    requests: [46, 52, 44, 62, 53, 66, 71, 61, 76, 68, 82, 73, 84, 76, 91, 80, 89, 77, 94, 85, 97, 87, 100, 88, 96, 82, 94, 79, 89, 72, 85, 75, 92, 79, 96, 84, 98, 89, 100, 91],
+    errors: [3, 4, 3, 6, 4, 5, 4, 7, 4, 3, 5, 7, 4, 6, 4, 5, 3, 6, 5, 4, 6, 4, 3, 5, 7, 4, 6, 3, 5, 4, 7, 5, 4, 6, 4, 5, 3, 5, 4, 6],
+  },
+  '6h': {
+    requests: [54, 61, 58, 68, 63, 74, 71, 82, 77, 88, 84, 96, 90, 101],
+    errors: [4, 5, 3, 6, 5, 4, 7, 5, 4, 6, 5, 3, 6, 4],
+  },
+  '24h': {
+    requests: [38, 44, 49, 46, 55, 59, 53, 63, 68, 64, 73, 78, 71, 82, 87, 81, 92, 97, 89, 100],
+    errors: [5, 4, 6, 4, 5, 7, 4, 5, 3, 6, 4, 5, 7, 4, 6, 3, 5, 4, 6, 4],
+  },
+};
+
+function renderTrafficChart(range = '1h') {
+  const { requests, errors } = trafficSeries[range];
   const width = 680;
   const height = 104;
   const req = chartPath(requests, width, height, 105);
   const err = chartPath(errors, width, height, 105);
   const grid = [0, 1, 2, 3].map((row) => `<line class="chart-grid-line" x1="0" y1="${row * (height / 3)}" x2="${width}" y2="${row * (height / 3)}" />`).join('');
-  document.querySelector('#traffic-chart').innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="traffic-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4bd5bf" /><stop offset="1" stop-color="#4bd5bf" stop-opacity="0" /></linearGradient></defs>${grid}<path class="chart-area" fill="url(#traffic-fill)" d="${req} L${width},${height} L0,${height} Z"/><path class="chart-line requests" d="${req}"/><path class="chart-line errors" d="${err}"/></svg>`;
+  const rangeLabel = range === '1h' ? 'the last hour' : `the last ${range === '6h' ? '6' : '24'} hours`;
+  const chart = document.querySelector('#traffic-chart');
+  chart.setAttribute('aria-label', `Requests and errors over ${rangeLabel}`);
+  chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="traffic-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4bd5bf" /><stop offset="1" stop-color="#4bd5bf" stop-opacity="0" /></linearGradient></defs>${grid}<path class="chart-area" fill="url(#traffic-fill)" d="${req} L${width},${height} L0,${height} Z"/><path class="chart-line requests" d="${req}"/><path class="chart-line errors" d="${err}"/></svg>`;
 }
 
 function renderEvents() {
@@ -103,6 +120,7 @@ document.querySelector('#refresh-services').addEventListener('click', (event) =>
 
 document.querySelector('#traffic-range').addEventListener('change', (event) => {
   const range = event.target.value;
+  renderTrafficChart(range);
   const labels = range === '24h'
     ? ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00']
     : range === '6h'
