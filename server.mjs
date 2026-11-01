@@ -8,6 +8,7 @@ const files = new Map([
   ['/','index.html'],
   ['/index.html','index.html'],
   ['/styles.css','styles.css'],
+  ['/polish.css','polish.css'],
   ['/app.js','app.js'],
 ]);
 const contentTypes = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
