@@ -58,6 +58,7 @@ function renderServices() {
   }).join('');
   document.querySelector('#empty-state').hidden = filteredServices.length > 0;
   document.querySelector('#service-count').textContent = `${services.length} services`;
+  document.querySelector('#service-total').textContent = services.length;
   document.querySelector('#nav-service-count').textContent = services.length;
   document.querySelector('#showing-count').textContent = filteredServices.length;
 }
