@@ -2,10 +2,10 @@ package com.circuitbreaker.recommendation;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,53 +15,28 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/recommendations")
 public class RecommendationController {
 
-    // Normal Recommendation API
+    private final RecommendationResilienceService resilienceService;
+
+    public RecommendationController(
+            RecommendationResilienceService resilienceService) {
+        this.resilienceService = resilienceService;
+    }
+
     @GetMapping
     public List<Map<String, Object>> getRecommendations() {
 
-        System.out.println("Recommendation request received");
-
-        return getSampleRecommendations();
-    }
-
-    // Simulate Slow Response
-    @GetMapping("/delay")
-    public List<Map<String, Object>> simulateDelay(
-            @RequestParam(defaultValue = "3") int seconds) {
-
-        if (seconds < 0 || seconds > 10) {
-            throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Delay must be between 0 and 10 seconds"
-            );
-        }
-
-        System.out.println(
-            "Simulating Recommendation Service delay: "
-            + seconds + " seconds"
+        return List.of(
+            Map.of("id", 2, "name", "Mobile", "reason", "Popular product"),
+            Map.of("id", 3, "name", "Headphones", "reason", "Frequently purchased"),
+            Map.of("id", 1, "name", "Laptop", "reason", "Trending product")
         );
-
-        try {
-            Thread.sleep(seconds * 1000L);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-
-            throw new ResponseStatusException(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "Request interrupted"
-            );
-        }
-
-        return getSampleRecommendations();
     }
 
-    // Simulate Service Failure
+    // WEEK 2: Failure simulation
     @GetMapping("/failure")
     public Map<String, Object> simulateFailure() {
 
-        System.out.println(
-            "Simulating Recommendation Service failure"
-        );
+        System.out.println("Simulating Recommendation Service failure");
 
         throw new ResponseStatusException(
             HttpStatus.INTERNAL_SERVER_ERROR,
@@ -69,25 +44,33 @@ public class RecommendationController {
         );
     }
 
-    // Sample Recommendation Data
-    private List<Map<String, Object>> getSampleRecommendations() {
+    // WEEK 3: Bulkhead
+    @GetMapping("/bulkhead")
+    public List<Map<String, Object>> bulkhead(
+            @RequestParam(defaultValue = "5") int seconds) {
 
-        return List.of(
-            Map.of(
-                "id", 2,
-                "name", "Mobile",
-                "reason", "Popular product"
-            ),
-            Map.of(
-                "id", 3,
-                "name", "Headphones",
-                "reason", "Frequently purchased"
-            ),
-            Map.of(
-                "id", 1,
-                "name", "Laptop",
-                "reason", "Trending product"
-            )
-        );
+        validateSeconds(seconds);
+
+        return resilienceService.getBulkheadRecommendations(seconds);
+    }
+
+    // WEEK 3: TimeLimiter
+    @GetMapping("/timelimit")
+    public CompletableFuture<List<Map<String, Object>>> timeLimit(
+            @RequestParam(defaultValue = "4") int seconds) {
+
+        validateSeconds(seconds);
+
+        return resilienceService.getDelayedRecommendations(seconds);
+    }
+
+    private void validateSeconds(int seconds) {
+
+        if (seconds < 0 || seconds > 10) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Seconds must be between 0 and 10"
+            );
+        }
     }
 }
