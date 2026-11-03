@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import {
   LayoutDashboard,
@@ -19,7 +20,9 @@ import {
   getRecommendations,
   getServiceHealth,
   simulateRecommendationFailure,
-  simulateRecommendationDelay
+  simulateRecommendationDelay,
+  testBulkhead,
+  testTimeLimiter
 } from './services/api'
 
 import './App.css'
@@ -54,6 +57,9 @@ function App() {
   const [recommendationMode, setRecommendationMode] = useState('Unknown')
 
   const [selectedProduct, setSelectedProduct] = useState('1')
+
+  // Week 3 test results
+  const [week3Results, setWeek3Results] = useState(null)
 
   useEffect(() => {
     loadDashboard()
@@ -136,12 +142,14 @@ function App() {
     }
   }
 
+  // WEEK 2: Single failure test
   async function testFailure() {
     setLoading(true)
     setMessage('Sending a simulated failure request...')
 
     try {
       await simulateRecommendationFailure()
+
       setMessage(
         'The service returned a normal response. Check your backend configuration.'
       )
@@ -161,11 +169,13 @@ function App() {
   async function loadRecommendationsAfterTest() {
     try {
       const data = await getRecommendations()
+
       const items = Array.isArray(data)
         ? data
         : data?.recommendations || []
 
       setRecommendations(items)
+
       setRecommendationMode(
         data?.status === 'FALLBACK' ? 'Fallback' : 'Normal'
       )
@@ -174,36 +184,42 @@ function App() {
     }
   }
 
+  // WEEK 2: Multiple failure test
   async function testMultipleFailures() {
     setLoading(true)
     setMessage('Sending 5 failure requests one by one...')
 
     let failedRequests = 0
 
-    for (let i = 0; i < 5; i++) {
-      try {
-        await simulateRecommendationFailure()
-      } catch {
-        failedRequests++
+    try {
+      for (let i = 0; i < 5; i++) {
+        try {
+          await simulateRecommendationFailure()
+        } catch {
+          failedRequests++
+        }
       }
+
+      await loadRecommendationsAfterTest()
+
+      setMessage(
+        `${failedRequests} failure responses received. ` +
+        'Now check whether the next recommendation request returns fallback data.'
+      )
+      setMessageType('info')
+    } finally {
+      setLoading(false)
     }
-
-    await loadRecommendationsAfterTest()
-
-    setMessage(
-      `${failedRequests} failure responses received. ` +
-      'Now check whether the next recommendation request returns fallback data.'
-    )
-    setMessageType('info')
-    setLoading(false)
   }
 
+  // WEEK 2: Delay test
   async function testDelay() {
     setLoading(true)
     setMessage('Testing a 3-second recommendation delay...')
 
     try {
       await simulateRecommendationDelay(3)
+
       setMessage(
         'Delay request completed. Check the Gateway timeout and Circuit Breaker settings.'
       )
@@ -216,6 +232,159 @@ function App() {
     } finally {
       setLoading(false)
       await loadRecommendationsAfterTest()
+    }
+  }
+
+  // WEEK 3: Rate Limiter test
+  async function runRateLimiterTest() {
+    setLoading(true)
+    setMessage('Sending 6 simultaneous recommendation requests...')
+
+    setWeek3Results(null)
+
+    try {
+      const results = await Promise.allSettled(
+        Array.from(
+          { length: 6 },
+          () => getRecommendations()
+        )
+      )
+
+      const summary = results.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return {
+            request: index + 1,
+            status: 'SUCCESS',
+            details: 'Request accepted'
+          }
+        }
+
+        const error = result.reason
+
+        return {
+          request: index + 1,
+          status: error?.status === 429 ? 'BLOCKED' : 'FAILED',
+          details: error?.status
+            ? `HTTP ${error.status}`
+            : error?.message || 'Request failed'
+        }
+      })
+
+      setWeek3Results({
+        title: 'Rate Limiter Results',
+        results: summary
+      })
+
+      const blocked = summary.filter(
+        item => item.status === 'BLOCKED'
+      ).length
+
+      setMessage(
+        `${summary.length} requests completed. ${blocked} request(s) were blocked.`
+      )
+      setMessageType(blocked > 0 ? 'success' : 'info')
+    } catch (error) {
+      setMessage(error.message || 'Rate Limiter test failed')
+      setMessageType('error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // WEEK 3: Bulkhead test
+  async function runBulkheadTest() {
+    setLoading(true)
+    setMessage('Sending 3 simultaneous Bulkhead requests...')
+
+    setWeek3Results(null)
+
+    try {
+      const results = await Promise.allSettled([
+        testBulkhead(5),
+        testBulkhead(5),
+        testBulkhead(5)
+      ])
+
+      const summary = results.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return {
+            request: index + 1,
+            status: 'SUCCESS',
+            details: JSON.stringify(result.value)
+          }
+        }
+
+        const error = result.reason
+
+        return {
+          request: index + 1,
+          status: 'FAILED',
+          details: error?.message || 'Request failed'
+        }
+      })
+
+      setWeek3Results({
+        title: 'Bulkhead Results',
+        results: summary
+      })
+
+      const successful = summary.filter(
+        item => item.status === 'SUCCESS'
+      ).length
+
+      setMessage(
+        `${successful} of 3 Bulkhead requests completed successfully.`
+      )
+      setMessageType('info')
+    } catch (error) {
+      setMessage(error.message || 'Bulkhead test failed')
+      setMessageType('error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // WEEK 3: Time Limiter test
+  async function runTimeLimiterTest() {
+    setLoading(true)
+    setMessage('Testing the Time Limiter with a 4-second request...')
+
+    setWeek3Results(null)
+
+    try {
+      const result = await testTimeLimiter(4)
+
+      setWeek3Results({
+        title: 'Time Limiter Results',
+        results: [
+          {
+            request: 1,
+            status: 'SUCCESS',
+            details: JSON.stringify(result)
+          }
+        ]
+      })
+
+      setMessage('Time Limiter request completed. Check the returned response.')
+      setMessageType('success')
+    } catch (error) {
+      setWeek3Results({
+        title: 'Time Limiter Results',
+        results: [
+          {
+            request: 1,
+            status: 'TIMEOUT / FAILED',
+            details: error.message || 'Request timed out'
+          }
+        ]
+      })
+
+      setMessage(
+        `Time Limiter request failed or timed out: ${error.message}`
+      )
+      setMessageType('error')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -242,10 +411,12 @@ function App() {
           <div className="brand-icon">
             <ShieldCheck size={25} />
           </div>
+
           <div>
             <h2>CircuitBreaker</h2>
             <span>Cloud API Gateway</span>
           </div>
+
           <button
             className="close-sidebar"
             onClick={() => setSidebarOpen(false)}
@@ -279,7 +450,8 @@ function App() {
             Backend connection
             <strong>Gateway : 8080</strong>
           </div>
-          <p>Week 1 &amp; Week 2 · Mid Review</p>
+
+          <p>Week 1, Week 2 &amp; Week 3</p>
         </div>
       </aside>
 
@@ -293,7 +465,9 @@ function App() {
           </button>
 
           <div>
-            <p className="breadcrumb">CIRCUITBREAKER / {pageTitle.toUpperCase()}</p>
+            <p className="breadcrumb">
+              CIRCUITBREAKER / {pageTitle.toUpperCase()}
+            </p>
             <h1>{pageTitle}</h1>
           </div>
 
@@ -325,6 +499,7 @@ function App() {
             recommendationMode={recommendationMode}
             onProducts={() => navigate('products')}
             onRecommendations={() => navigate('recommendations')}
+            onCircuit={() => navigate('circuit')}
           />
         )}
 
@@ -363,6 +538,10 @@ function App() {
             onFailure={testFailure}
             onMultipleFailures={testMultipleFailures}
             onDelay={testDelay}
+            onRateLimit={runRateLimiterTest}
+            onBulkhead={runBulkheadTest}
+            onTimeLimiter={runTimeLimiterTest}
+            week3Results={week3Results}
             loading={loading}
           />
         )}
@@ -382,7 +561,8 @@ function Dashboard({
   health,
   recommendationMode,
   onProducts,
-  onRecommendations
+  onRecommendations,
+  onCircuit
 }) {
   const services = Object.values(health)
   const online = services.filter(value => value === 'UP').length
@@ -398,6 +578,7 @@ function Dashboard({
             and test fault tolerance through the API Gateway.
           </p>
         </div>
+
         <div className="welcome-art">
           <ShieldCheck size={90} />
         </div>
@@ -410,18 +591,21 @@ function Dashboard({
           value={products.length}
           color="purple"
         />
+
         <StatCard
           icon={<Server />}
           label="Services Online"
           value={`${online} / 4`}
           color="green"
         />
+
         <StatCard
           icon={<Sparkles />}
           label="Recommendations"
           value={recommendations.length}
           color="orange"
         />
+
         <StatCard
           icon={<ShieldCheck />}
           label="Recommendation Mode"
@@ -447,6 +631,7 @@ function Dashboard({
         <div className="content-card">
           <h3>Product Management</h3>
           <p>View the products received from Product Service.</p>
+
           <button className="primary-button" onClick={onProducts}>
             View Products
           </button>
@@ -455,8 +640,18 @@ function Dashboard({
         <div className="content-card">
           <h3>Recommendations</h3>
           <p>Explore normal and fallback recommendation responses.</p>
+
           <button className="primary-button" onClick={onRecommendations}>
             View Recommendations
+          </button>
+        </div>
+
+        <div className="content-card">
+          <h3>Resilience Testing</h3>
+          <p>Test Circuit Breaker, Rate Limiter, Bulkhead and Time Limiter.</p>
+
+          <button className="primary-button" onClick={onCircuit}>
+            Open Testing Dashboard
           </button>
         </div>
       </div>
@@ -468,6 +663,7 @@ function StatCard({ icon, label, value, color }) {
   return (
     <div className="stat-card">
       <div className={`stat-icon ${color}`}>{icon}</div>
+
       <div>
         <p>{label}</p>
         <h2>{value}</h2>
@@ -477,7 +673,8 @@ function StatCard({ icon, label, value, color }) {
 }
 
 function HealthCard({ name, status }) {
-  const label = name.replace('recommendation', 'Recommendation')
+  const label = name
+    .replace('recommendation', 'Recommendation')
     .replace('product', 'Product')
     .replace('inventory', 'Inventory')
     .replace('gateway', 'API Gateway')
@@ -486,10 +683,12 @@ function HealthCard({ name, status }) {
     <div className="health-card">
       <div className="health-card-top">
         <Server size={20} />
+
         <span className={`status-pill ${status === 'UP' ? 'up' : 'down'}`}>
           {status}
         </span>
       </div>
+
       <h3>{label}</h3>
       <p>Spring Boot Service</p>
     </div>
@@ -517,12 +716,22 @@ function Products({ products }) {
               <div className="product-art">
                 <Package size={45} />
               </div>
+
               <div className="product-info">
-                <span className="eyebrow">PRODUCT #{product.id ?? index + 1}</span>
-                <h3>{product.name || product.productName || 'Product'}</h3>
+                <span className="eyebrow">
+                  PRODUCT #{product.id ?? index + 1}
+                </span>
+
+                <h3>
+                  {product.name || product.productName || 'Product'}
+                </h3>
+
                 <p>{product.description || 'E-commerce product'}</p>
+
                 <strong>
-                  {product.price != null ? `₹${product.price}` : 'Price not provided'}
+                  {product.price != null
+                    ? `₹${product.price}`
+                    : 'Price not provided'}
                 </strong>
               </div>
             </div>
@@ -551,6 +760,7 @@ function Inventory({
 
       <div className="content-card inventory-panel">
         <label htmlFor="productId">Select Product ID</label>
+
         <select
           id="productId"
           value={selectedProduct}
@@ -607,8 +817,13 @@ function Recommendations({ recommendations, mode, onRefresh }) {
           {recommendations.map((item, index) => (
             <div className="recommendation-card" key={item.id ?? index}>
               <Sparkles size={24} />
-              <h3>{item.name || item.productName || 'Recommended Product'}</h3>
+
+              <h3>
+                {item.name || item.productName || 'Recommended Product'}
+              </h3>
+
               <p>{item.reason || 'Recommended for customers'}</p>
+
               <span>Product ID: {item.id ?? 'N/A'}</span>
             </div>
           ))}
@@ -646,8 +861,14 @@ function Health({ health, onRefresh }) {
 
       <div className="content-card">
         <h3>Health Status Explanation</h3>
-        <p><strong>UP:</strong> The service health endpoint responded successfully.</p>
-        <p><strong>DOWN:</strong> The health endpoint could not be reached or reported an issue.</p>
+
+        <p>
+          <strong>UP:</strong> The service health endpoint responded successfully.
+        </p>
+
+        <p>
+          <strong>DOWN:</strong> The health endpoint could not be reached or reported an issue.
+        </p>
       </div>
     </>
   )
@@ -658,22 +879,28 @@ function CircuitBreaker({
   onFailure,
   onMultipleFailures,
   onDelay,
+  onRateLimit,
+  onBulkhead,
+  onTimeLimiter,
+  week3Results,
   loading
 }) {
   return (
     <>
       <div className="section-heading">
         <div>
-          <h2>Circuit Breaker Testing</h2>
-          <p>Test Recommendation Service failures and fallback behavior</p>
+          <h2>Resilience Testing Dashboard</h2>
+          <p>Test failure handling and resilience features of the API Gateway</p>
         </div>
       </div>
 
       <div className="circuit-banner">
         <ShieldCheck size={42} />
+
         <div>
           <span className="eyebrow">RECOMMENDATION RESPONSE</span>
           <h2>{mode}</h2>
+
           <p>
             This label describes the last successful recommendation response.
             It is not a direct reading of the internal breaker state.
@@ -681,11 +908,23 @@ function CircuitBreaker({
         </div>
       </div>
 
+      <div className="section-heading">
+        <div>
+          <h2>Week 2 - Circuit Breaker</h2>
+          <p>Test Recommendation Service failures and fallback behavior</p>
+        </div>
+      </div>
+
       <div className="test-grid">
         <div className="content-card">
           <AlertTriangle size={25} />
+
           <h3>Single Failure Test</h3>
-          <p>Send one simulated HTTP 500 response from Recommendation Service.</p>
+
+          <p>
+            Send one simulated HTTP 500 response from Recommendation Service.
+          </p>
+
           <button
             className="danger-button"
             onClick={onFailure}
@@ -697,8 +936,13 @@ function CircuitBreaker({
 
         <div className="content-card">
           <Activity size={25} />
+
           <h3>Multiple Failure Test</h3>
-          <p>Send five failure requests sequentially to test the configured threshold.</p>
+
+          <p>
+            Send five failure requests sequentially to test the configured threshold.
+          </p>
+
           <button
             className="danger-button"
             onClick={onMultipleFailures}
@@ -710,8 +954,13 @@ function CircuitBreaker({
 
         <div className="content-card">
           <RefreshCw size={25} />
+
           <h3>Delay Test</h3>
-          <p>Send a recommendation request with a three-second delay.</p>
+
+          <p>
+            Send a recommendation request with a three-second delay.
+          </p>
+
           <button
             className="primary-button"
             onClick={onDelay}
@@ -724,7 +973,9 @@ function CircuitBreaker({
 
       <div className="content-card instructions">
         <h3>How to demonstrate Circuit Breaker</h3>
+
         <ol>
+          <li>Start all backend applications.</li>
           <li>Open the Recommendation Service while all applications are running.</li>
           <li>Use the normal recommendation endpoint first.</li>
           <li>Run the multiple failure test.</li>
@@ -732,10 +983,131 @@ function CircuitBreaker({
           <li>Observe the fallback response and Gateway console output.</li>
           <li>Allow the configured open-state wait duration before testing recovery.</li>
         </ol>
+
         <p className="muted">
           The breaker uses a sliding window of four calls and a 50% failure
           threshold. The actual state is maintained by Resilience4j in the
           Gateway; this page does not yet read a live breaker-state metric.
+        </p>
+      </div>
+
+      <div className="section-heading">
+        <div>
+          <h2>Week 3 - Advanced Resilience</h2>
+          <p>Test Rate Limiter, Bulkhead and Time Limiter</p>
+        </div>
+      </div>
+
+      <div className="test-grid">
+        <div className="content-card">
+          <Activity size={25} />
+
+          <h3>Rate Limiter</h3>
+
+          <p>
+            Send six simultaneous recommendation requests.
+            The configured limit is five requests per ten seconds.
+          </p>
+
+          <button
+            className="primary-button"
+            onClick={onRateLimit}
+            disabled={loading}
+          >
+            Test Rate Limiter
+          </button>
+        </div>
+
+        <div className="content-card">
+          <Server size={25} />
+
+          <h3>Bulkhead</h3>
+
+          <p>
+            Send three simultaneous requests.
+            The configured maximum concurrent calls is two.
+          </p>
+
+          <button
+            className="primary-button"
+            onClick={onBulkhead}
+            disabled={loading}
+          >
+            Test Bulkhead
+          </button>
+        </div>
+
+        <div className="content-card">
+          <RefreshCw size={25} />
+
+          <h3>Time Limiter</h3>
+
+          <p>
+            Send a four-second request to test the configured two-second timeout.
+          </p>
+
+          <button
+            className="primary-button"
+            onClick={onTimeLimiter}
+            disabled={loading}
+          >
+            Test Time Limiter
+          </button>
+        </div>
+      </div>
+
+      {loading && (
+        <div className="content-card">
+          <p>Test running. Please wait for the backend response...</p>
+        </div>
+      )}
+
+      {week3Results && (
+        <div className="content-card">
+          <h3>{week3Results.title}</h3>
+
+          <div className="inventory-result">
+            {week3Results.results.map((item, index) => (
+              <div key={index}>
+                <p>
+                  <strong>Request {item.request}:</strong>{' '}
+                  <span
+                    className={
+                      item.status === 'SUCCESS'
+                        ? 'success-text'
+                        : 'error-text'
+                    }
+                  >
+                    {item.status}
+                  </span>
+                </p>
+
+                <p>{item.details}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="content-card instructions">
+        <h3>Week 3 Testing Instructions</h3>
+
+        <ol>
+          <li>Start Eureka Server and all three microservices.</li>
+          <li>Start the API Gateway.</li>
+          <li>Open this frontend dashboard.</li>
+          <li>Click Test Rate Limiter and check for HTTP 429 responses.</li>
+          <li>Wait at least ten seconds before running the next test.</li>
+          <li>Click Test Bulkhead and observe the three concurrent requests.</li>
+          <li>Click Test Time Limiter and observe whether the request times out.</li>
+          <li>Check the Recommendation Service and Gateway console logs.</li>
+        </ol>
+
+        <p className="muted">
+          Note: All recommendation routes share the configured Gateway rate
+          limiter. Wait for its ten-second window to reset before testing
+          Bulkhead or Time Limiter. Actual results depend on the backend
+          configuration and service response.
         </p>
       </div>
     </>

@@ -42,3 +42,11 @@ export const simulateRecommendationFailure = () =>
 
 export const simulateRecommendationDelay = (seconds = 3) =>
   request(`/api/recommendations/delay?seconds=${seconds}`)
+
+// Week 3: Bulkhead
+export const testBulkhead = (seconds = 5) =>
+  request(`/api/recommendations/bulkhead?seconds=${seconds}`)
+
+// Week 3: TimeLimiter
+export const testTimeLimiter = (seconds = 4) =>
+  request(`/api/recommendations/timelimit?seconds=${seconds}`)
