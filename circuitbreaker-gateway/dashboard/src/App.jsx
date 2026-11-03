@@ -14,14 +14,6 @@ const SERVICES = [
   { key: 'gateway', name: 'API Gateway', id: 'api-gateway', port: 8080, url: '/actuator/health' },
 ]
 
-const PAGES = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'chaos', label: 'Chaos Lab' },
-  { id: 'resilience', label: 'Resilience' },
-  { id: 'tracing', label: 'Tracing' },
-  { id: 'shop', label: 'Storefront' },
-]
-
 // ---------------------------------------------------------------
 // Small helpers
 // ---------------------------------------------------------------
@@ -51,7 +43,7 @@ function classify(r) {
   return 'error'
 }
 
-const KIND_LABEL = { live: 'Live', fallback: 'Fallback', blocked: 'Blocked', error: 'Error' }
+const KIND_LABEL = { live: 'Live', fallback: 'Backup', blocked: 'Blocked', error: 'Error' }
 
 const listOf = (d) => (Array.isArray(d) ? d : (d && (d.products || d.items || d.content || d.data)) || [])
 const rupees = (n) => '₹' + Number(n || 0).toLocaleString('en-IN')
@@ -62,16 +54,16 @@ function Pill({ kind, children }) {
   return <span className={'pill ' + kind}>{children || KIND_LABEL[kind]}</span>
 }
 
-function Card({ title, hint, tag, children, className = '' }) {
+function Card({ title, hint, children, className = '', right }) {
   return (
       <section className={'card ' + className}>
-        {(title || tag) && (
+        {title && (
             <header className="card-head">
               <div>
                 <h2>{title}</h2>
                 {hint && <p className="hint">{hint}</p>}
               </div>
-              {tag && <span className="tag">{tag}</span>}
+              {right}
             </header>
         )}
         {children}
@@ -88,18 +80,22 @@ function Stat({ value, label, tone }) {
   )
 }
 
+// A breaker lever: up = fine, middle = testing, down = stopped or down.
+function Lever({ pos, tone }) {
+  return <span className={'lever ' + pos + ' ' + tone} aria-hidden="true"><i /></span>
+}
+
 // ---------------------------------------------------------------
-// Main app
+// Main app: one page, top to bottom.
 // ---------------------------------------------------------------
 export default function App() {
-  const [page, setPage] = useState(() => (window.location.hash || '#overview').slice(1))
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem('cb-theme') || 'auto' } catch { return 'auto' }
   })
 
-  const [health, setHealth] = useState({})           // key -> { up, ms }
+  const [health, setHealth] = useState({})
   const [chaos, setChaos] = useState('normal')
-  const [breakers, setBreakers] = useState(null)     // null = gateway has no breaker endpoint yet
+  const [breakers, setBreakers] = useState(null)
   const [products, setProducts] = useState([])
   const [stock, setStock] = useState({})
   const [selected, setSelected] = useState('P-101')
@@ -110,19 +106,11 @@ export default function App() {
   const [counts, setCounts] = useState({ live: 0, fallback: 0, blocked: 0, error: 0 })
   const [rateTest, setRateTest] = useState(null)
   const [bulkTest, setBulkTest] = useState(null)
-  const [traceTest, setTraceTest] = useState(null)
 
   const seq = useRef(0)
   const haveCatalog = useRef(false)
 
-  // ---- page + theme -------------------------------------------
-  useEffect(() => {
-    const onHash = () => setPage((window.location.hash || '#overview').slice(1))
-    window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
-  }, [])
-  const go = (id) => { window.location.hash = id; window.scrollTo({ top: 0 }) }
-
+  // ---- theme ---------------------------------------------------
   useEffect(() => {
     const root = document.documentElement
     if (theme === 'light' || theme === 'dark') root.setAttribute('data-theme', theme)
@@ -131,7 +119,7 @@ export default function App() {
   }, [theme])
   const nextTheme = () => setTheme((t) => (t === 'auto' ? 'light' : t === 'light' ? 'dark' : 'auto'))
 
-  // ---- request log --------------------------------------------
+  // ---- request log ---------------------------------------------
   const record = useCallback((id, r) => {
     const kind = classify(r)
     seq.current += 1
@@ -147,7 +135,7 @@ export default function App() {
     return { r, kind }
   }, [record])
 
-  // ---- polling: health, chaos mode, breaker state, catalog ----
+  // ---- polling: health, chaos mode, breaker state, catalog -----
   const loadCatalog = useCallback(async () => {
     const [p, s] = await Promise.all([timedFetch('/api/products'), timedFetch('/api/inventory')])
     if (p.ok) {
@@ -185,7 +173,7 @@ export default function App() {
     return () => { stop = true; clearInterval(t) }
   }, [loadCatalog])
 
-  // ---- gentle background traffic so the numbers move ----------
+  // ---- background traffic so the numbers move ------------------
   const gatewayUp = !!(health.gateway && health.gateway.up)
   useEffect(() => {
     if (!auto || !gatewayUp) return undefined
@@ -196,47 +184,33 @@ export default function App() {
     return () => clearInterval(t)
   }, [auto, gatewayUp, selected, fetchRec])
 
-  // ---- actions ------------------------------------------------
+  useEffect(() => {
+    if (gatewayUp && !rec) pick(selected)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gatewayUp])
+
+  // ---- actions -------------------------------------------------
   const burst = (n, id = selected) => Promise.all(Array.from({ length: n }, () => fetchRec(id)))
 
   const setMode = async (mode) => {
     const r = await timedFetch('/chaos?mode=' + mode + '&delayMs=4000', { method: 'POST' }, 4000)
     if (r.ok) setChaos((r.data && r.data.mode) || mode)
-    return r.ok
   }
-
-  const triggerLatency = async () => {
-    setBusy('latency')
-    await setMode('slow')
-    await burst(8)
-    setBusy('')
-  }
+  const triggerLatency = async () => { setBusy('latency'); await setMode('slow'); await burst(8); setBusy('') }
   const sendBurst = async () => { setBusy('burst'); await burst(12); setBusy('') }
   const recover = async () => { setBusy('recover'); await setMode('normal'); setBusy('') }
 
   const runRateTest = async () => {
     setBusy('rate')
-    const t0 = performance.now()
     const rs = await Promise.all(Array.from({ length: 30 }, () => timedFetch('/api/products', {}, 6000)))
-    const blocked = rs.filter((r) => r.status === 429).length
-    const ok = rs.filter((r) => r.ok).length
-    setRateTest({ sent: rs.length, ok, blocked, ms: Math.round(performance.now() - t0) })
+    setRateTest({ sent: rs.length, ok: rs.filter((r) => r.ok).length, blocked: rs.filter((r) => r.status === 429).length })
     setBusy('')
   }
-
   const runBulkTest = async () => {
     setBusy('bulk')
-    const t0 = performance.now()
     const rs = await burst(15)
     const k = (name) => rs.filter((x) => x.kind === name).length
-    setBulkTest({ sent: rs.length, live: k('live'), fallback: k('fallback'), blocked: k('blocked'), error: k('error'), ms: Math.round(performance.now() - t0) })
-    setBusy('')
-  }
-
-  const runTrace = async () => {
-    setBusy('trace')
-    const { r, kind } = await fetchRec(selected)
-    setTraceTest({ at: clock(), kind, ms: r.ms })
+    setBulkTest({ sent: rs.length, live: k('live'), fallback: k('fallback'), blocked: k('blocked'), error: k('error') })
     setBusy('')
   }
 
@@ -246,17 +220,9 @@ export default function App() {
     setRec({ id, kind, ms: r.ms, ids: (r.data && r.data.recommendations) || [] })
   }
 
-  // Opening the Storefront should show recommendations straight away.
-  useEffect(() => {
-    if (page === 'shop' && !rec && gatewayUp) pick(selected)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, gatewayUp])
-
-  // ---- derived state ------------------------------------------
+  // ---- derived state -------------------------------------------
   const recDown = health.recommendation && !health.recommendation.up
   const recentFallbacks = log.slice(0, 3).length === 3 && log.slice(0, 3).every((e) => e.kind === 'fallback')
-
-  // Real breaker (from the gateway) when available, otherwise an estimate.
   const realBreaker = breakers && (breakers.find((b) => /recommend/i.test(b.name)) || breakers[0])
   let breakerState = 'CLOSED'
   let estimated = false
@@ -273,11 +239,11 @@ export default function App() {
   let tone = 'good'
   if (health.gateway && !health.gateway.up) {
     headline = 'Gateway is not reachable'
-    sub = 'Start the api-gateway in IntelliJ (port 8080), then this page will wake up by itself.'
+    sub = 'Start the api-gateway in IntelliJ (port 8080). This page wakes up by itself.'
     tone = 'bad'
   } else if (breakerState === 'OPEN') {
     headline = 'Breaker is open, shoppers see Top Sellers'
-    sub = 'The gateway stopped calling Recommendation and answers with a backup. Everything else stays fast.'
+    sub = 'The gateway stopped calling Recommendation and answers with a backup. The rest of the shop stays fast.'
     tone = 'warn'
   } else if (breakerState === 'HALF_OPEN') {
     headline = 'Breaker is testing recovery'
@@ -285,7 +251,7 @@ export default function App() {
     tone = 'warn'
   } else if (recDown) {
     headline = 'Recommendation service is down'
-    sub = 'The gateway is covering with a backup answer. The rest of the shop still works.'
+    sub = 'The gateway covers with a backup answer. The rest of the shop still works.'
     tone = 'warn'
   } else if (chaos !== 'normal') {
     headline = chaos === 'slow' ? 'Recommendation is slowed on purpose' : 'Recommendation is failing on purpose'
@@ -293,364 +259,209 @@ export default function App() {
     tone = 'warn'
   }
 
-  const statusOf = (key) => {
+  // One place decides how each module looks.
+  const moduleView = (key) => {
     const h = health[key]
-    if (!h) return 'idle'
-    if (!h.up) return 'bad'
-    if (key === 'recommendation' && (breakerState === 'OPEN' || chaos !== 'normal')) return 'warn'
-    return 'good'
+    if (!h) return { pos: 'idle', tone: 'idle', label: 'Checking', detail: '…' }
+    if (!h.up) return { pos: 'down', tone: 'bad', label: 'Down', detail: 'No answer' }
+    if (key === 'recommendation') {
+      if (breakerState === 'OPEN') return { pos: 'down', tone: 'bad', label: 'Breaker open', detail: 'Backup answers' }
+      if (breakerState === 'HALF_OPEN') return { pos: 'mid', tone: 'warn', label: 'Testing', detail: 'Trial requests' }
+      if (chaos !== 'normal') return { pos: 'up', tone: 'warn', label: chaos === 'slow' ? 'Slowed' : 'Failing', detail: 'On purpose' }
+      const last = log.find((e) => e.kind === 'live')
+      return { pos: 'up', tone: 'good', label: 'Healthy', detail: last ? 'Last answer ' + last.ms + ' ms' : 'Health check ' + h.ms + ' ms' }
+    }
+    return { pos: 'up', tone: 'good', label: 'Healthy', detail: 'Health check ' + h.ms + ' ms' }
   }
-  const statusText = { good: 'Healthy', warn: 'Protected', bad: 'Down', idle: 'Checking' }
-  const nameOf = (id) => (products.find((p) => idOf(p) === id) || {}).name || id
 
-  const ctx = {
-    health, chaos, breakers, realBreaker, breakerState, estimated, products, stock, selected, rec, auto, busy, log, counts,
-    rateTest, bulkTest, traceTest, headline, sub, tone, statusOf, statusText, nameOf,
-    setAuto, setMode, triggerLatency, sendBurst, recover, runRateTest, runBulkTest, runTrace, pick, go,
-  }
+  const nameOf = (id) => (products.find((p) => idOf(p) === id) || {}).name || id
+  const recIds = (rec && rec.ids) || []
+  const modes = [
+    { id: 'normal', label: 'Normal' },
+    { id: 'slow', label: 'Slow (4 s)' },
+    { id: 'fail', label: 'Fail (500)' },
+  ]
+  const b = realBreaker
+  const pct = (v) => (v == null || v < 0 ? '–' : Number(v).toFixed(0) + '%')
+  const stateInfo = {
+    CLOSED: { word: 'Closed', tone: 'good', note: 'Requests go through.' },
+    HALF_OPEN: { word: 'Half-open', tone: 'warn', note: 'Trying a few test requests.' },
+    OPEN: { word: 'Open', tone: 'bad', note: 'Requests are stopped. Backup answer used.' },
+  }[breakerState] || { word: breakerState, tone: 'idle', note: '' }
 
   return (
       <div className="app">
         <header className="top">
           <div className="top-in">
-            <a className="brand" href="#overview" onClick={() => go('overview')}>
+            <div className="brand">
             <span className="logo" aria-hidden="true">
               <svg viewBox="0 0 32 32" width="22" height="22"><path d="M5 17h6l3-8 4 15 3-7h6" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </span>
               CircuitBreaker
-            </a>
-            <nav className="tabs" aria-label="Pages">
-              {PAGES.map((p) => (
-                  <button key={p.id} className={page === p.id ? 'tab on' : 'tab'} onClick={() => go(p.id)}>{p.label}</button>
-              ))}
-            </nav>
+            </div>
             <div className="top-right">
             <span className={'chip ' + (gatewayUp ? 'good' : 'bad')}>
               <i className="dot" />{gatewayUp ? 'Gateway online' : 'Gateway offline'}
             </span>
               <button className="chip btn-chip" onClick={nextTheme} title="Change theme">
-                {theme === 'auto' ? 'Auto' : theme === 'light' ? 'Light' : 'Dark'}
+                Theme: {theme === 'auto' ? 'Auto' : theme === 'light' ? 'Light' : 'Dark'}
               </button>
             </div>
           </div>
         </header>
 
         <main className="wrap">
-          {page === 'chaos' && <ChaosPage {...ctx} />}
-          {page === 'resilience' && <ResiliencePage {...ctx} />}
-          {page === 'tracing' && <TracingPage {...ctx} />}
-          {page === 'shop' && <ShopPage {...ctx} />}
-          {!['chaos', 'resilience', 'tracing', 'shop'].includes(page) && <OverviewPage {...ctx} />}
-        </main>
+          <section className="headline">
+            <h1><span className={'hdot ' + tone} />{headline}</h1>
+            <p>{sub}</p>
+          </section>
 
-        <footer className="foot">CircuitBreaker · Spring Cloud Gateway + Resilience4j · Axlero internship project</footer>
-      </div>
-  )
-}
-
-// ---------------------------------------------------------------
-// Pages
-// ---------------------------------------------------------------
-function Hero({ headline, sub, tone }) {
-  return (
-      <div className={'hero ' + tone}>
-        <span className="hero-dot" />
-        <div>
-          <h1>{headline}</h1>
-          <p>{sub}</p>
-        </div>
-      </div>
-  )
-}
-
-function OverviewPage(p) {
-  const { counts } = p
-  const total = counts.live + counts.fallback + counts.blocked + counts.error
-  return (
-      <>
-        <Hero headline={p.headline} sub={p.sub} tone={p.tone} />
-
-        <Card title="How a request travels" hint="The gateway is the only door. It routes, limits and protects.">
-          <div className="flow">
-            <div className="node plain"><b>Shopper</b><small>Browser</small></div>
-            <span className="arrow" aria-hidden="true" />
-            <div className={'node big ' + p.statusOf('gateway')}>
-              <b>API Gateway</b>
-              <small>Routes · Rate limit · Circuit breaker</small>
-            </div>
-            <span className="arrow" aria-hidden="true" />
-            <div className="targets">
-              {SERVICES.filter((s) => s.key !== 'gateway').map((s) => (
-                  <div key={s.key} className={'node ' + p.statusOf(s.key)}>
-                    <b>{s.name}</b>
-                    {s.key === 'recommendation' && <small>Breaker: {p.breakerState.replace('_', '-').toLowerCase()}</small>}
-                  </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-
-        <div className="grid4">
-          {SERVICES.map((s) => {
-            const st = p.statusOf(s.key)
-            const h = p.health[s.key]
-            return (
-                <div key={s.key} className={'svc ' + st}>
-                  <div className="svc-top">
-                    <b>{s.name}</b>
-                    <span className={'badge ' + st}><i className="dot" />{p.statusText[st]}</span>
-                  </div>
-                  <span className="svc-id">{s.id} · :{s.port}</span>
-                  <span className="svc-ms">{h ? (h.up ? 'Health check ' + h.ms + ' ms' : 'No answer') : '…'}</span>
-                </div>
-            )
-          })}
-        </div>
-
-        <Card title="Requests so far" hint={total === 0 ? 'Numbers appear as soon as traffic flows.' : 'Everything the shopper side has asked for, grouped by what happened.'}>
-          <div className="stats">
-            <Stat value={counts.live} label="Live answers" tone="good" />
-            <Stat value={counts.fallback} label="Fallback answers" tone="warn" />
-            <Stat value={counts.blocked} label="Blocked" tone="info" />
-            <Stat value={counts.error} label="Errors" tone="bad" />
-          </div>
-          <div className="row-actions">
-            <button className="btn" onClick={() => p.go('chaos')}>Open Chaos Lab</button>
-            <button className="btn ghost" onClick={() => p.go('resilience')}>See breaker state</button>
-          </div>
-        </Card>
-      </>
-  )
-}
-
-function LogList({ log }) {
-  if (log.length === 0) return <p className="empty">No requests yet. They show up here as they happen.</p>
-  return (
-      <ul className="log">
-        {log.slice(0, 14).map((e) => (
-            <li key={e.key}>
-              <span className="t">{e.time}</span>
-              <span className="id">{e.id}</span>
-              <Pill kind={e.kind} />
-              <span className="ms">{e.ms} ms</span>
-            </li>
-        ))}
-      </ul>
-  )
-}
-
-function ChaosPage(p) {
-  const modes = [
-    { id: 'normal', label: 'Normal' },
-    { id: 'slow', label: 'Slow (4 s)' },
-    { id: 'fail', label: 'Fail (500)' },
-  ]
-  const { counts } = p
-  return (
-      <>
-        <div className="page-title">
-          <h1>Chaos Lab</h1>
-          <p>Break the Recommendation service on purpose and watch the gateway protect the shopper. No restart needed.</p>
-        </div>
-
-        <div className="two">
-          <Card title="Make it misbehave" hint={'Current mode: ' + p.chaos}>
-            <div className="seg" role="group" aria-label="Recommendation behaviour">
-              {modes.map((m) => (
-                  <button key={m.id} className={p.chaos === m.id ? 'on' : ''} onClick={() => p.setMode(m.id)}>{m.label}</button>
-              ))}
-            </div>
-
-            <div className="row-actions">
-              <button className="btn warn" disabled={!!p.busy} onClick={p.triggerLatency}>
-                {p.busy === 'latency' ? 'Sending…' : 'Trigger latency'}
-              </button>
-              <button className="btn" disabled={!!p.busy} onClick={p.sendBurst}>
-                {p.busy === 'burst' ? 'Sending…' : 'Send 12 at once'}
-              </button>
-              <button className="btn ghost" disabled={!!p.busy} onClick={p.recover}>Back to normal</button>
-            </div>
-
-            <label className="check">
-              <input type="checkbox" checked={p.auto} onChange={(e) => p.setAuto(e.target.checked)} />
-              Send one request every 2.5 s so the numbers keep moving
-            </label>
-
-            <ol className="steps">
-              <li>Press <b>Trigger latency</b>. Recommendation becomes slow and 8 requests go out.</li>
-              <li>The gateway gives up after 3 s and shows <b>Top Sellers</b> instead.</li>
-              <li>Open <b>Resilience</b> to see the breaker turn red. Then press <b>Back to normal</b> and wait about 10 s.</li>
-            </ol>
-          </Card>
-
-          <Card title="Live requests" hint="Newest first">
-            <div className="stats small">
-              <Stat value={counts.live} label="Live" tone="good" />
-              <Stat value={counts.fallback} label="Fallback" tone="warn" />
-              <Stat value={counts.blocked} label="Blocked" tone="info" />
-              <Stat value={counts.error} label="Error" tone="bad" />
-            </div>
-            <LogList log={p.log} />
-          </Card>
-        </div>
-      </>
-  )
-}
-
-const STATES = [
-  { id: 'CLOSED', label: 'Closed', note: 'Everything is fine. Requests go through.' },
-  { id: 'HALF_OPEN', label: 'Half-open', note: 'Trying a few requests to see if it recovered.' },
-  { id: 'OPEN', label: 'Open', note: 'Too many failures. Requests are stopped and the backup answer is used.' },
-]
-
-function ResiliencePage(p) {
-  const b = p.realBreaker
-  const pct = (v) => (v == null || v < 0 ? '–' : Number(v).toFixed(0) + '%')
-  const rt = p.rateTest
-  const bt = p.bulkTest
-  return (
-      <>
-        <div className="page-title">
-          <h1>Resilience</h1>
-          <p>The three protections the gateway puts in front of your services.</p>
-        </div>
-
-        <Card
-            title="Circuit breaker"
-            hint="Route: Recommendation service"
-            tag={p.estimated ? 'Estimated from responses' : 'Live from gateway'}
-        >
-          <div className="states">
-            {STATES.map((s) => (
-                <div key={s.id} className={'state ' + s.id + (p.breakerState === s.id ? ' on' : '')}>
-                  <span className="state-dot" />
-                  <b>{s.label}</b>
-                  <small>{s.note}</small>
-                </div>
-            ))}
-          </div>
-
-          <div className="stats small">
-            <Stat value={b ? pct(b.failureRate) : '–'} label="Failure rate" />
-            <Stat value={b ? pct(b.slowCallRate) : '–'} label="Slow-call rate" />
-            <Stat value={b ? b.bufferedCalls : '–'} label="Calls in window" />
-            <Stat value={b ? b.notPermittedCalls : '–'} label="Stopped by breaker" tone="warn" />
-          </div>
-          <p className="rule">
-            Rule: the breaker opens when half of the last 10 calls fail or run slower than 2 s. It waits 10 s, then tries 3 test calls.
-            {p.estimated && ' Exact numbers show up once the gateway breaker endpoint (/gateway/breakers) is added.'}
-          </p>
-        </Card>
-
-        <div className="two">
-          <Card title="Rate limiter" hint="Stops one visitor from flooding the gateway" tag="Week 3">
-            <button className="btn" disabled={!!p.busy} onClick={p.runRateTest}>
-              {p.busy === 'rate' ? 'Sending…' : 'Send 30 requests very fast'}
-            </button>
-            {rt ? (
-                <div className="result">
-                  <div className="meter"><i className="ok" style={{ width: (rt.ok / rt.sent) * 100 + '%' }} /><i className="no" style={{ width: (rt.blocked / rt.sent) * 100 + '%' }} /></div>
-                  <p><b>{rt.ok}</b> allowed · <b>{rt.blocked}</b> blocked (HTTP 429) · took {rt.ms} ms</p>
-                  {rt.blocked === 0 && <p className="hint">Nothing was blocked, so the rate limiter is not switched on in the gateway yet.</p>}
-                </div>
-            ) : <p className="hint">Not tested yet.</p>}
-          </Card>
-
-          <Card title="Bulkhead" hint="Limits how many calls one route can hold at the same time" tag="Week 3">
-            <button className="btn" disabled={!!p.busy} onClick={p.runBulkTest}>
-              {p.busy === 'bulk' ? 'Sending…' : 'Send 15 at the same time'}
-            </button>
-            {bt ? (
-                <div className="result">
-                  <div className="meter"><i className="ok" style={{ width: (bt.live / bt.sent) * 100 + '%' }} /><i className="mid" style={{ width: (bt.fallback / bt.sent) * 100 + '%' }} /><i className="no" style={{ width: (bt.blocked / bt.sent) * 100 + '%' }} /></div>
-                  <p><b>{bt.live}</b> live · <b>{bt.fallback}</b> fallback · <b>{bt.blocked}</b> rejected · took {bt.ms} ms</p>
-                  {bt.blocked === 0 && <p className="hint">No call was rejected, so the bulkhead limit is not active yet. Try it with Recommendation set to Slow.</p>}
-                </div>
-            ) : <p className="hint">Not tested yet. Works best with Recommendation set to Slow.</p>}
-          </Card>
-        </div>
-      </>
-  )
-}
-
-function TracingPage(p) {
-  const t = p.traceTest
-  return (
-      <>
-        <div className="page-title">
-          <h1>Tracing</h1>
-          <p>Follow one request as it hops from the gateway to the services. Zipkin draws the whole path.</p>
-        </div>
-
-        <Card title="One request, many hops" tag="Week 4">
-          <div className="hops">
-            <div className="hop"><b>1 · Browser</b><small>asks the gateway</small></div>
-            <div className="hop"><b>2 · API Gateway</b><small>finds the service in Eureka</small></div>
-            <div className="hop"><b>3 · Recommendation</b><small>builds the answer</small></div>
-            <div className="hop"><b>4 · Back to browser</b><small>live or fallback</small></div>
-          </div>
-          <p className="rule">Each hop gets the same trace id, so Zipkin can show all of them as one timeline with the time spent in every step.</p>
-
-          <div className="row-actions">
-            <button className="btn" disabled={!!p.busy} onClick={p.runTrace}>
-              {p.busy === 'trace' ? 'Sending…' : 'Send a request to trace'}
-            </button>
-            <a className="btn ghost" href={ZIPKIN_URL} target="_blank" rel="noreferrer">Open Zipkin</a>
-          </div>
-
-          {t && (
-              <p className="result-line">
-                Sent at {t.at}, answered <Pill kind={t.kind} /> in <b>{t.ms} ms</b>. Open Zipkin and press Run Query to see it.
-              </p>
-          )}
-          <p className="hint">If Zipkin does not open, start it with: docker run -p 9411:9411 openzipkin/zipkin</p>
-        </Card>
-      </>
-  )
-}
-
-function ShopPage(p) {
-  const recIds = (p.rec && p.rec.ids) || []
-  return (
-      <>
-        <div className="page-title">
-          <h1>Storefront</h1>
-          <p>This is what a shopper sees. Pick a product to load its recommendations.</p>
-        </div>
-
-        {p.products.length === 0 ? (
-            <Card><p className="empty">No products yet. Make sure the gateway and Product service are running.</p></Card>
-        ) : (
-            <div className="products">
-              {p.products.map((x) => {
-                const id = idOf(x)
-                const qty = p.stock[id]
+          {/* 1. Breaker panel: the state of every service at a glance */}
+          <section className="board" aria-label="Breaker panel">
+            <header className="board-head">
+              <h2>Breaker panel</h2>
+              <p>Lever up: healthy. Middle: testing. Down: stopped or not working.</p>
+            </header>
+            <div className="mods">
+              {SERVICES.map((s) => {
+                const v = moduleView(s.key)
                 return (
-                    <button key={id} className={'product' + (p.selected === id ? ' on' : '')} onClick={() => p.pick(id)}>
-                      <small>{x.category}</small>
-                      <b>{x.name}</b>
-                      <span className="price">{rupees(x.price)}</span>
-                      <span className={'stock ' + (qty === 0 ? 'out' : '')}>{qty === undefined ? '' : qty === 0 ? 'Out of stock' : qty + ' in stock'}</span>
-                    </button>
+                    <div key={s.key} className={'mod ' + v.tone}>
+                      <div className="mod-text">
+                        <b>{s.name}</b>
+                        <span className="mod-id">{s.id} · :{s.port}</span>
+                        <span className={'mod-state ' + v.tone}><i className="dot" />{v.label}</span>
+                        <span className="mod-detail">{v.detail}</span>
+                      </div>
+                      <Lever pos={v.pos} tone={v.tone} />
+                    </div>
                 )
               })}
             </div>
-        )}
+          </section>
 
-        <Card
-            title={'You may also like, with ' + p.nameOf(p.selected)}
-        >
-          {p.rec ? (
-              <>
-                <div className="rec-meta"><Pill kind={p.rec.kind} /><span>{p.rec.ms} ms</span></div>
-                <div className="chips">
-                  {recIds.map((r, i) => <span key={i} className="chipx">{p.nameOf(idOf(r))}</span>)}
-                  {recIds.length === 0 && <span className="empty">No recommendations returned.</span>}
+          {/* 2. Protection: what the gateway does to keep things safe */}
+          <section aria-label="Protection">
+            <h2 className="section-title">What protects the shop</h2>
+            <div className="protect">
+              <Card className="tile">
+                <h3>Circuit breaker</h3>
+                <p className={'big ' + stateInfo.tone}><i className="dot" />{stateInfo.word}</p>
+                <p className="note">{stateInfo.note}</p>
+                <p className="meta">
+                  {b ? 'Failure rate ' + pct(b.failureRate) + ' · ' + b.bufferedCalls + ' calls in window' : 'Estimated from the last answers'}
+                </p>
+                <p className="meta faint">Opens at 50% failures or slow calls. Retries after 10 s.</p>
+              </Card>
+
+              <Card className="tile">
+                <h3>Rate limiter</h3>
+                <p className="note">Stops one visitor from flooding the gateway.</p>
+                {rateTest ? (
+                    <div className="result">
+                      <div className="meter"><i className="ok" style={{ width: (rateTest.ok / rateTest.sent) * 100 + '%' }} /><i className="no" style={{ width: (rateTest.blocked / rateTest.sent) * 100 + '%' }} /></div>
+                      <p className="meta"><b>{rateTest.ok}</b> allowed · <b>{rateTest.blocked}</b> blocked (429)</p>
+                      {rateTest.blocked === 0 && <p className="meta faint">Nothing blocked, so it is not switched on yet.</p>}
+                    </div>
+                ) : <p className="meta faint">Not tested yet.</p>}
+                <button className="btn small" disabled={!!busy} onClick={runRateTest}>{busy === 'rate' ? 'Sending…' : 'Test with 30 fast requests'}</button>
+              </Card>
+
+              <Card className="tile">
+                <h3>Bulkhead</h3>
+                <p className="note">Limits how many calls one route can hold at once.</p>
+                {bulkTest ? (
+                    <div className="result">
+                      <div className="meter"><i className="ok" style={{ width: (bulkTest.live / bulkTest.sent) * 100 + '%' }} /><i className="mid" style={{ width: (bulkTest.fallback / bulkTest.sent) * 100 + '%' }} /><i className="no" style={{ width: (bulkTest.blocked / bulkTest.sent) * 100 + '%' }} /></div>
+                      <p className="meta"><b>{bulkTest.live}</b> live · <b>{bulkTest.fallback}</b> backup · <b>{bulkTest.blocked}</b> rejected</p>
+                      {bulkTest.blocked === 0 && <p className="meta faint">Nothing rejected, so the limit is not active yet.</p>}
+                    </div>
+                ) : <p className="meta faint">Not tested yet.</p>}
+                <button className="btn small" disabled={!!busy} onClick={runBulkTest}>{busy === 'bulk' ? 'Sending…' : 'Test with 15 at once'}</button>
+              </Card>
+
+              <Card className="tile">
+                <h3>Request tracing</h3>
+                <p className="note">One trace id follows a request through the gateway and every service.</p>
+                <p className="meta faint">Each request you send here can be found in Zipkin.</p>
+                <a className="btn small ghost" href={ZIPKIN_URL} target="_blank" rel="noreferrer">Open Zipkin</a>
+              </Card>
+            </div>
+          </section>
+
+          {/* 3. Chaos + live requests */}
+          <div className="two">
+            <Card title="Break something on purpose" hint={'Recommendation is in ' + chaos + ' mode. No restart needed.'}>
+              <div className="seg" role="group" aria-label="Recommendation behaviour">
+                {modes.map((m) => (
+                    <button key={m.id} className={chaos === m.id ? 'on' : ''} onClick={() => setMode(m.id)}>{m.label}</button>
+                ))}
+              </div>
+              <div className="row-actions">
+                <button className="btn warn" disabled={!!busy} onClick={triggerLatency}>{busy === 'latency' ? 'Sending…' : 'Trigger latency'}</button>
+                <button className="btn" disabled={!!busy} onClick={sendBurst}>{busy === 'burst' ? 'Sending…' : 'Send 12 at once'}</button>
+                <button className="btn ghost" disabled={!!busy} onClick={recover}>Back to normal</button>
+              </div>
+              <label className="check">
+                <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
+                Send one request every 2.5 s
+              </label>
+              <p className="tip"><b>Try it:</b> press Trigger latency, watch the Recommendation lever drop, then press Back to normal and wait about 10 s.</p>
+            </Card>
+
+            <Card title="Live requests" hint="Newest first" right={<button className="link" onClick={() => { setLog([]); setCounts({ live: 0, fallback: 0, blocked: 0, error: 0 }) }}>Clear</button>}>
+              <div className="stats">
+                <Stat value={counts.live} label="Live" tone="good" />
+                <Stat value={counts.fallback} label="Backup" tone="warn" />
+                <Stat value={counts.blocked} label="Blocked" tone="info" />
+                <Stat value={counts.error} label="Error" tone="bad" />
+              </div>
+              {log.length === 0 ? <p className="empty">No requests yet.</p> : (
+                  <ul className="log">
+                    {log.slice(0, 12).map((e) => (
+                        <li key={e.key}>
+                          <span className="t">{e.time}</span>
+                          <span className="id">{e.id}</span>
+                          <Pill kind={e.kind} />
+                          <span className="ms">{e.ms} ms</span>
+                        </li>
+                    ))}
+                  </ul>
+              )}
+            </Card>
+          </div>
+
+          {/* 4. What the shopper sees */}
+          <Card title="What the shopper sees" hint="Pick a product to load its recommendations.">
+            {products.length === 0 ? <p className="empty">No products yet. Make sure the gateway and Product service are running.</p> : (
+                <div className="products">
+                  {products.map((x) => {
+                    const id = idOf(x)
+                    const qty = stock[id]
+                    return (
+                        <button key={id} className={'product' + (selected === id ? ' on' : '')} onClick={() => pick(id)}>
+                          <small>{x.category}</small>
+                          <b>{x.name}</b>
+                          <span className="price">{rupees(x.price)}</span>
+                          <span className={'stock ' + (qty === 0 ? 'out' : '')}>{qty === undefined ? '' : qty === 0 ? 'Out of stock' : qty + ' in stock'}</span>
+                        </button>
+                    )
+                  })}
                 </div>
-              </>
-          ) : <p className="empty">Pick a product above.</p>}
-          <p className="hint">Live means Recommendation answered. Fallback means the gateway answered with Top Sellers because the service was slow, failing, or the breaker was open.</p>
-        </Card>
-      </>
+            )}
+            <div className="rec">
+              <div className="rec-head">
+                <h3>You may also like, with {nameOf(selected)}</h3>
+                {rec && <><Pill kind={rec.kind} /><span className="ms">{rec.ms} ms</span></>}
+              </div>
+              <div className="chips">
+                {recIds.map((r, i) => <span key={i} className="chipx">{nameOf(idOf(r))}</span>)}
+                {rec && recIds.length === 0 && <span className="empty">No recommendations returned.</span>}
+              </div>
+            </div>
+            <p className="hint">Live means Recommendation answered. Backup means the gateway answered with Top Sellers because the service was slow, failing, or the breaker was open.</p>
+          </Card>
+        </main>
+      </div>
   )
 }
