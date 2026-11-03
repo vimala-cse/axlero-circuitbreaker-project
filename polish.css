@@ -86,6 +86,34 @@ h1 { font-size: clamp(28px, 3vw, 36px); letter-spacing: -1.5px; }
 .event-row { min-height: 52px; }
 .event-copy span { color: #91a0b4; }
 
+:where(a, button, input, select):focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
+
+button:disabled { cursor: not-allowed; }
+.range-select, .search-box, .icon-button, .outline-button { transition: border-color .18s ease, background .18s ease, box-shadow .18s ease; }
+.range-select:hover, .search-box:focus-within { border-color: #496477; }
+.icon-button:hover, .outline-button:hover { box-shadow: 0 0 0 3px #79ead414; }
+
+@media (max-width: 840px) {
+  .page-heading { padding-top: 28px; }
+  .metric-card { min-height: 116px; }
+  .content-grid { gap: 11px; }
+}
+
+@media (max-width: 540px) {
+  .page-heading { padding-bottom: 19px; }
+  h1 { font-size: 27px; }
+  .panel { border-radius: 10px; padding: 14px 12px; }
+  .metric-card { min-height: 112px; }
+  .table-footer { gap: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metric-card, .range-select, .search-box, .icon-button, .outline-button { transition: none; }
+}
+
 body {
   background:
     radial-gradient(ellipse at 80% -15%, #172a3952 0, transparent 48%),
