@@ -51,6 +51,41 @@ h1 { font-size: clamp(28px, 3vw, 36px); letter-spacing: -1.5px; }
   backdrop-filter: blur(16px);
 }
 
+.metric-card,
+.panel {
+  border-color: #2b394c;
+  background: linear-gradient(145deg, #121d2a 0%, #101722 70%, #0e151f 100%);
+  box-shadow: 0 12px 30px #02071130, inset 0 1px #ffffff08;
+}
+
+.metric-card {
+  min-height: 124px;
+  padding: 16px 17px 14px;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.metric-card:hover {
+  transform: translateY(-2px);
+  border-color: #3b5665;
+  box-shadow: 0 16px 34px #0207114d, inset 0 1px #ffffff0c;
+}
+.metric-value { font-size: 28px; }
+.metric-heading { color: #a5b2c4; }
+
+.panel { border-radius: 12px; padding: 19px 20px; }
+.panel h2 { font-size: 15px; }
+.panel-kicker { color: #91a0b4; }
+.traffic-chart { margin-top: 8px; }
+.breaker-gauge { filter: drop-shadow(0 0 16px #f3b55716); }
+
+.services-panel { overflow: hidden; }
+.table-wrap th { color: #98a7ba; background: #131d29; }
+.table-wrap td { padding-top: 12px; padding-bottom: 12px; }
+.table-wrap tbody tr:hover { background: #182534; }
+.service-name { color: #edf2fa; }
+.service-subname { color: #91a0b4; }
+.event-row { min-height: 52px; }
+.event-copy span { color: #91a0b4; }
+
 body {
   background:
     radial-gradient(ellipse at 80% -15%, #172a3952 0, transparent 48%),
