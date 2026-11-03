@@ -16,6 +16,41 @@
   --violet: #baa7ff;
 }
 
+/* Clearer visual hierarchy across the console. */
+:root {
+  --bg: #080c13;
+  --sidebar: #0a1019;
+  --panel: #111a26;
+  --panel-hi: #182535;
+  --line: #2a394c;
+  --line-soft: #202e40;
+  --text: #f4f7fc;
+  --muted: #a1adbf;
+  --subtle: #77869c;
+  --teal: #79ead4;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 77% -12%, #1e526048 0, transparent 42%),
+    radial-gradient(ellipse at 35% 65%, #33295c18 0, transparent 48%),
+    var(--bg);
+}
+
+.main-content { max-width: 1640px; }
+
+.page-heading { padding-top: 36px; padding-bottom: 25px; }
+h1 { font-size: clamp(28px, 3vw, 36px); letter-spacing: -1.5px; }
+.page-subtitle { font-size: 12px; color: #a0adbf; }
+.eyebrow { color: #a0c7bf; }
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  backdrop-filter: blur(16px);
+}
+
 body {
   background:
     radial-gradient(ellipse at 80% -15%, #172a3952 0, transparent 48%),
