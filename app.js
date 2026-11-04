@@ -103,7 +103,7 @@ function renderTrafficChart(range = '1h') {
   const rangeLabel = range === '1h' ? 'the last hour' : `the last ${range === '6h' ? '6' : '24'} hours`;
   const chart = document.querySelector('#traffic-chart');
   chart.setAttribute('aria-label', `Requests and errors over ${rangeLabel}`);
-  chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="traffic-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4bd5bf" /><stop offset="1" stop-color="#4bd5bf" stop-opacity="0" /></linearGradient></defs>${grid}<path class="chart-area" fill="url(#traffic-fill)" d="${req} L${width},${height} L0,${height} Z"/><path class="chart-line requests" d="${req}"/><path class="chart-line errors" d="${err}"/></svg>`;
+  chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="traffic-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4bd5bf" /><stop offset="1" stop-color="#4bd5bf" stop-opacity="0" /></linearGradient></defs>${grid}<path class="chart-area" fill="url(#traffic-fill)" d="${req} L${width},${height} L0,${height} Z"/><path class="chart-line requests" pathLength="100" d="${req}"/><path class="chart-line errors" pathLength="100" d="${err}"/></svg>`;
 }
 
 function renderEvents() {
