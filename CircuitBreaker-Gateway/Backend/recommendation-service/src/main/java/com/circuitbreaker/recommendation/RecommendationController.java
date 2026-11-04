@@ -63,6 +63,21 @@ public class RecommendationController {
 
         return resilienceService.getDelayedRecommendations(seconds);
     }
+    
+    @GetMapping("/delay")
+    public String delay(@RequestParam(defaultValue = "3") int seconds)
+            throws InterruptedException {
+
+        if (seconds < 1 || seconds > 10) {
+            throw new IllegalArgumentException(
+                "Seconds must be between 1 and 10");
+        }
+
+        Thread.sleep(seconds * 1000L);
+
+        return "Recommendation response completed after "
+                + seconds + " seconds";
+    }
 
     private void validateSeconds(int seconds) {
 
