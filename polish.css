@@ -118,6 +118,17 @@ h1 { font-size: clamp(28px, 3vw, 36px); letter-spacing: -1.5px; }
 @keyframes chart-draw { to { stroke-dashoffset: 0; } }
 @keyframes chart-fill { from { opacity: 0; } to { opacity: .09; } }
 
+@media (max-width: 540px) {
+  .services-header { align-items: stretch; }
+  .service-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .service-actions .search-box { grid-column: 1 / -1; width: 100%; min-height: 36px; }
+  .service-actions .range-select { min-height: 36px; font-size: 10px; }
+  .service-actions .refresh-button { width: 36px; height: 36px; }
+  .panel-controls { flex-wrap: wrap; justify-content: flex-end; }
+  .panel-legend { margin-right: auto; }
+  .chart-axis { font-size: 7px; }
+}
+
 :where(a, button, input, select):focus-visible {
   outline: 2px solid var(--teal);
   outline-offset: 3px;
