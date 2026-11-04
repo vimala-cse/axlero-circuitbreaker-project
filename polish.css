@@ -86,6 +86,28 @@ h1 { font-size: clamp(28px, 3vw, 36px); letter-spacing: -1.5px; }
 .event-row { min-height: 52px; }
 .event-copy span { color: #91a0b4; }
 
+.sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 2px 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.sort-button span { color: #6ed9c4; font-size: 12px; }
+.sort-button:hover { color: #dce8f2; }
+.empty-state:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 106px;
+}
+
 :where(a, button, input, select):focus-visible {
   outline: 2px solid var(--teal);
   outline-offset: 3px;
