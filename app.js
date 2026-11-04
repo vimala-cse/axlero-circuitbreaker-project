@@ -19,6 +19,7 @@ const serviceRows = document.querySelector('#service-rows');
 const eventList = document.querySelector('#event-list');
 const toastViewport = document.querySelector('#toast-viewport');
 let toastTimer;
+let serviceSort = { field: null, direction: 1 };
 
 function showToast(message) {
   const toast = document.createElement('div');
@@ -42,7 +43,13 @@ function renderServices() {
     const matchesStatus = statusFilter === 'all' || (statusFilter === 'open' ? service.breaker === 'OPEN' : service.status === statusFilter);
     return matchesQuery && matchesStatus;
   });
-  serviceRows.innerHTML = filteredServices.map((service) => {
+  const sortedServices = [...filteredServices].sort((left, right) => {
+    if (!serviceSort.field) return 0;
+    const leftValue = serviceSort.field === 'name' ? left.name : left[serviceSort.field];
+    const rightValue = serviceSort.field === 'name' ? right.name : right[serviceSort.field];
+    return (typeof leftValue === 'string' ? leftValue.localeCompare(rightValue) : leftValue - rightValue) * serviceSort.direction;
+  });
+  serviceRows.innerHTML = sortedServices.map((service) => {
     const healthLabel = service.status === 'degraded' ? 'Degraded' : 'Healthy';
     const breakerClass = service.breaker === 'OPEN' ? 'open' : service.breaker === 'HALF-OPEN' ? 'half' : '';
     const latencyClass = service.latency > 150 ? 'slow' : '';
@@ -109,6 +116,19 @@ renderEvents();
 
 document.querySelector('#service-search').addEventListener('input', renderServices);
 document.querySelector('#service-filter').addEventListener('change', renderServices);
+
+document.querySelectorAll('[data-sort]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const field = button.dataset.sort;
+    serviceSort = { field, direction: serviceSort.field === field ? -serviceSort.direction : 1 };
+    document.querySelectorAll('[data-sort]').forEach((item) => {
+      const active = item === button;
+      item.closest('th').setAttribute('aria-sort', active ? (serviceSort.direction === 1 ? 'ascending' : 'descending') : 'none');
+      item.querySelector('span').textContent = active ? (serviceSort.direction === 1 ? '↑' : '↓') : '↕';
+    });
+    renderServices();
+  });
+});
 
 document.querySelector('#refresh-services').addEventListener('click', (event) => {
   const button = event.currentTarget;
