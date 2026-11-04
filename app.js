@@ -116,6 +116,12 @@ renderEvents();
 
 document.querySelector('#service-search').addEventListener('input', renderServices);
 document.querySelector('#service-filter').addEventListener('change', renderServices);
+document.querySelector('#clear-service-filters').addEventListener('click', () => {
+  document.querySelector('#service-search').value = '';
+  document.querySelector('#service-filter').value = 'all';
+  renderServices();
+  document.querySelector('#service-search').focus();
+});
 
 document.querySelectorAll('[data-sort]').forEach((button) => {
   button.addEventListener('click', () => {
