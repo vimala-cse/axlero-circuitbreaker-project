@@ -60,7 +60,7 @@ function renderServices() {
       <td><span class="latency-value ${latencyClass}">${service.latency} ms</span></td>
       <td><span class="request-count">${number(service.requests)}</span></td>
       <td><span class="breaker-mini ${breakerClass}">${service.breaker}</span></td>
-      <td><button class="row-menu" type="button" aria-label="Actions for ${service.name}">···</button></td>
+      <td><button class="row-menu" type="button" data-service-details="${service.id}" aria-label="View details for ${service.name}">···</button></td>
     </tr>`;
   }).join('');
   document.querySelector('#empty-state').hidden = filteredServices.length > 0;
@@ -135,6 +135,22 @@ document.querySelectorAll('[data-sort]').forEach((button) => {
     renderServices();
   });
 });
+
+const serviceDetailsDialog = document.querySelector('#service-details-dialog');
+serviceRows.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-service-details]');
+  if (!button) return;
+  const service = services.find((item) => item.id === button.dataset.serviceDetails);
+  if (!service) return;
+  document.querySelector('#service-details-title').textContent = service.name;
+  document.querySelector('#service-details-id').textContent = service.detail;
+  document.querySelector('#service-details-status').textContent = `${service.status} · ${service.breaker}`;
+  document.querySelector('#service-details-instances').textContent = service.instances;
+  document.querySelector('#service-details-latency').textContent = `${service.latency} ms`;
+  document.querySelector('#service-details-requests').textContent = number(service.requests);
+  serviceDetailsDialog.showModal();
+});
+serviceDetailsDialog.querySelector('[data-close-dialog]').addEventListener('click', () => serviceDetailsDialog.close());
 
 document.querySelector('#refresh-services').addEventListener('click', (event) => {
   const button = event.currentTarget;
