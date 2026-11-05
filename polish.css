@@ -481,6 +481,16 @@ button:disabled { cursor: default; }
 .detail-grid div { padding: 12px; border: 1px solid #2b394b; border-radius: 8px; background: #101925; }
 .detail-grid dt { color: #9aa8ba; font-size: 10px; }
 .detail-grid dd { margin: 7px 0 0; color: #eef3f9; font: 12px var(--mono); }
+.utility-dialog { max-height: min(80vh, 680px); overflow: auto; }
+.notification-list { display: grid; gap: 0; margin-top: 18px; }
+.notification-item { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 9px; min-height: 58px; border-top: 1px solid #2b394b; }
+.notification-item .event-copy { font-size: 10px; }
+.notification-item .event-copy span { font-size: 9px; }
+.mark-read-button { margin-top: 13px; }
+.notification-dot[hidden] { display: none; }
+.help-content { margin-top: 16px; color: #bac5d3; font-size: 12px; line-height: 1.6; }
+.help-content ul { display: grid; gap: 8px; padding-left: 20px; }
+.help-note { padding: 10px 12px; border: 1px solid #364253; border-radius: 7px; color: #9facbd; background: #101925; font-size: 10px; }
 
 @media (max-width: 1100px) {
   .main-content { padding-left: 26px; padding-right: 26px; }

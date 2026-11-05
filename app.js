@@ -110,6 +110,10 @@ function renderEvents() {
   eventList.innerHTML = events.map((event) => `<div class="event-row"><span class="event-icon ${event.tone}">${event.icon}</span><div class="event-copy"><strong>${event.title}</strong> · ${event.target}<span>${event.detail}</span></div><time class="event-time">${event.time}</time></div>`).join('');
 }
 
+function renderNotifications() {
+  document.querySelector('#notification-list').innerHTML = events.map((event) => `<div class="notification-item"><span class="event-icon ${event.tone}">${event.icon}</span><div class="event-copy"><strong>${event.title}</strong> · ${event.target}<span>${event.detail}</span></div><time class="event-time">${event.time}</time></div>`).join('');
+}
+
 renderServices();
 renderTrafficChart();
 renderEvents();
@@ -151,6 +155,20 @@ serviceRows.addEventListener('click', (event) => {
   serviceDetailsDialog.showModal();
 });
 serviceDetailsDialog.querySelector('[data-close-dialog]').addEventListener('click', () => serviceDetailsDialog.close());
+
+const notificationsDialog = document.querySelector('#notifications-dialog');
+document.querySelector('#notifications-button').addEventListener('click', () => {
+  renderNotifications();
+  notificationsDialog.showModal();
+});
+notificationsDialog.querySelector('[data-close-dialog]').addEventListener('click', () => notificationsDialog.close());
+document.querySelector('#mark-notifications-read').addEventListener('click', () => {
+  document.querySelector('.notification-dot').hidden = true;
+  notificationsDialog.close();
+});
+const helpDialog = document.querySelector('#help-dialog');
+document.querySelector('#help-button').addEventListener('click', () => helpDialog.showModal());
+helpDialog.querySelector('[data-close-dialog]').addEventListener('click', () => helpDialog.close());
 
 document.querySelector('#refresh-services').addEventListener('click', (event) => {
   const button = event.currentTarget;
@@ -195,6 +213,7 @@ document.querySelector('#reset-breaker').addEventListener('click', () => {
   document.querySelector('#reset-breaker').textContent = '✓  Probe in progress';
   document.querySelector('#reset-breaker').disabled = true;
   events.unshift({ icon: '↻', tone: 'success', title: 'Circuit breaker manually reset', target: 'Recommendation Engine', detail: 'State changed to half-open · waiting for a health probe', time: 'just now' });
+  document.querySelector('.notification-dot').hidden = false;
   renderEvents();
   document.querySelector('#nav-event-count').textContent = events.length;
   showToast('Recommendation Engine is half-open');
