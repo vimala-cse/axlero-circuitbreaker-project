@@ -110,6 +110,22 @@ function renderEvents() {
   eventList.innerHTML = events.map((event) => `<div class="event-row"><span class="event-icon ${event.tone}">${event.icon}</span><div class="event-copy"><strong>${event.title}</strong> · ${event.target}<span>${event.detail}</span></div><time class="event-time">${event.time}</time></div>`).join('');
 }
 
+function updateBreakerSummary() {
+  const openBreakers = services.filter((service) => service.breaker === 'OPEN');
+  document.querySelector('#open-breaker-value').innerHTML = `${openBreakers.length}<span class="metric-unit">/ ${services.length}</span>`;
+  document.querySelector('#breaker-count').textContent = openBreakers.length;
+  const metricStatus = document.querySelector('#breaker-metric-status');
+  const metricCaption = document.querySelector('#breaker-metric-caption');
+  metricStatus.className = openBreakers.length ? 'trend-warning' : 'trend-positive';
+  metricStatus.textContent = openBreakers.length ? '● Needs attention' : '✓ All clear';
+  metricCaption.textContent = openBreakers.length ? openBreakers.map((service) => service.name).join(', ') : 'No open breakers';
+  const breakerNavDot = document.querySelector('.nav-dot');
+  breakerNavDot.hidden = openBreakers.length === 0;
+  if (openBreakers.length) breakerNavDot.setAttribute('aria-label', `${openBreakers.length} open`);
+  else breakerNavDot.removeAttribute('aria-label');
+  document.querySelector('.breaker-gauge').setAttribute('aria-label', `${openBreakers.length} circuit breakers open out of ${services.length}`);
+}
+
 function renderNotifications() {
   document.querySelector('#notification-list').innerHTML = events.map((event) => `<div class="notification-item"><span class="event-icon ${event.tone}">${event.icon}</span><div class="event-copy"><strong>${event.title}</strong> · ${event.target}<span>${event.detail}</span></div><time class="event-time">${event.time}</time></div>`).join('');
 }
@@ -198,13 +214,10 @@ document.querySelector('#reset-breaker').addEventListener('click', () => {
   recommendation.latency = 96;
   recommendation.instances = '2 / 2';
   renderServices();
-  document.querySelector('#open-breaker-value').innerHTML = '0<span class="metric-unit">/ 6</span>';
-  document.querySelector('#breaker-count').textContent = '0';
-  document.querySelector('.breaker-gauge').setAttribute('aria-label', 'Zero circuit breakers open out of six');
-  const breakerNavDot = document.querySelector('.nav-dot');
-  breakerNavDot.hidden = true;
-  breakerNavDot.removeAttribute('aria-label');
-  document.querySelector('.breaker-gauge').style.background = 'radial-gradient(circle at center,#10141d 58%,transparent 60%),conic-gradient(from -90deg,var(--green) 0 60deg,#29303c 60deg 360deg)';
+  updateBreakerSummary();
+  const gauge = document.querySelector('.breaker-gauge');
+  gauge.dataset.state = 'half-open';
+  gauge.style.background = '';
   const status = document.querySelector('.breaker-status-copy .status-pill');
   status.className = 'status-pill status-half';
   status.innerHTML = '<i></i> HALF-OPEN';
@@ -217,6 +230,24 @@ document.querySelector('#reset-breaker').addEventListener('click', () => {
   renderEvents();
   document.querySelector('#nav-event-count').textContent = events.length;
   showToast('Recommendation Engine is half-open');
+  window.setTimeout(() => {
+    recommendation.breaker = 'CLOSED';
+    recommendation.status = 'healthy';
+    recommendation.latency = 74;
+    renderServices();
+    updateBreakerSummary();
+    gauge.dataset.state = 'closed';
+    status.className = 'status-pill status-closed';
+    status.innerHTML = '<i></i> CLOSED';
+    document.querySelector('.breaker-status-copy p').textContent = 'Health probe passed. Normal traffic has resumed.';
+    document.querySelector('#failed-calls').textContent = '0';
+    document.querySelector('#reset-breaker').textContent = '✓  Breaker recovered';
+    events.unshift({ icon: '✓', tone: 'success', title: 'Circuit breaker closed', target: 'Recommendation Engine', detail: 'Health probe passed · normal traffic resumed', time: 'just now' });
+    renderEvents();
+    document.querySelector('#nav-event-count').textContent = events.length;
+    document.querySelector('.notification-dot').hidden = false;
+    showToast('Recommendation Engine recovered');
+  }, 2200);
 });
 
 document.querySelectorAll('[data-scroll]').forEach((button) => {
