@@ -112,16 +112,24 @@ function renderEvents() {
 
 function updateBreakerSummary() {
   const openBreakers = services.filter((service) => service.breaker === 'OPEN');
+  const probingBreakers = services.filter((service) => service.breaker === 'HALF-OPEN');
   document.querySelector('#open-breaker-value').innerHTML = `${openBreakers.length}<span class="metric-unit">/ ${services.length}</span>`;
   document.querySelector('#breaker-count').textContent = openBreakers.length;
   const metricStatus = document.querySelector('#breaker-metric-status');
   const metricCaption = document.querySelector('#breaker-metric-caption');
-  metricStatus.className = openBreakers.length ? 'trend-warning' : 'trend-positive';
-  metricStatus.textContent = openBreakers.length ? '● Needs attention' : '✓ All clear';
-  metricCaption.textContent = openBreakers.length ? openBreakers.map((service) => service.name).join(', ') : 'No open breakers';
+  const metricCard = document.querySelector('#breaker-metric-card');
+  const metricIcon = document.querySelector('#breaker-metric-icon');
+  const needsAttention = openBreakers.length > 0 || probingBreakers.length > 0;
+  metricCard.classList.toggle('metric-alert', openBreakers.length > 0);
+  metricCard.classList.toggle('metric-clear', !needsAttention);
+  metricIcon.className = `metric-icon ${openBreakers.length ? 'orange-icon' : probingBreakers.length ? 'violet-icon' : 'green-icon'}`;
+  metricStatus.className = openBreakers.length ? 'trend-warning' : probingBreakers.length ? 'trend-probing' : 'trend-positive';
+  metricStatus.textContent = openBreakers.length ? '● Needs attention' : probingBreakers.length ? '◌ Probe running' : '✓ All clear';
+  metricCaption.textContent = openBreakers.length ? openBreakers.map((service) => service.name).join(', ') : probingBreakers.length ? probingBreakers.map((service) => service.name).join(', ') : 'No open breakers';
   const breakerNavDot = document.querySelector('.nav-dot');
-  breakerNavDot.hidden = openBreakers.length === 0;
+  breakerNavDot.hidden = !needsAttention;
   if (openBreakers.length) breakerNavDot.setAttribute('aria-label', `${openBreakers.length} open`);
+  else if (probingBreakers.length) breakerNavDot.setAttribute('aria-label', 'Breaker probe in progress');
   else breakerNavDot.removeAttribute('aria-label');
   document.querySelector('.breaker-gauge').setAttribute('aria-label', `${openBreakers.length} circuit breakers open out of ${services.length}`);
 }
@@ -164,7 +172,7 @@ serviceRows.addEventListener('click', (event) => {
   if (!service) return;
   document.querySelector('#service-details-title').textContent = service.name;
   document.querySelector('#service-details-id').textContent = service.detail;
-  document.querySelector('#service-details-status').textContent = `${service.status} · ${service.breaker}`;
+  document.querySelector('#service-details-status').textContent = `${service.status[0].toUpperCase()}${service.status.slice(1)} · ${service.breaker}`;
   document.querySelector('#service-details-instances').textContent = service.instances;
   document.querySelector('#service-details-latency').textContent = `${service.latency} ms`;
   document.querySelector('#service-details-requests').textContent = number(service.requests);
