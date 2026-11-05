@@ -36,7 +36,7 @@
       </aside>
 
       <main class="main-content" id="overview">
-        <header class="topbar"><div class="breadcrumbs">Axlero Commerce <span>/</span> <strong>Overview</strong></div><div class="topbar-actions"><span class="environment-pill"><span></span> Production</span><button class="icon-button" type="button" aria-label="Notifications">♧<i></i></button><span class="topbar-divider"></span><button class="help-button" type="button">? <span>Help</span></button></div></header>
+        <header class="topbar"><div class="breadcrumbs">Axlero Commerce <span>/</span> <strong>Overview</strong></div><div class="topbar-actions"><span class="environment-pill"><span></span> Production</span><button class="icon-button" type="button" id="notifications-button" aria-label="Open notifications" aria-haspopup="dialog">♧<i class="notification-dot"></i></button><span class="topbar-divider"></span><button class="help-button" type="button" id="help-button" aria-haspopup="dialog">? <span>Help</span></button></div></header>
         <section class="page-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span>GATEWAY CONTROL PLANE</div><h1>System overview<span class="heading-period">.</span></h1><p class="page-subtitle">A real-time view of your gateway, services, and resilience patterns.</p></div><div class="heading-meta"><span class="live-indicator"></span><span>Live updates</span><span class="meta-divider"></span><span>Last refreshed <strong id="last-refreshed">just now</strong></span></div></section>
 
         <section class="metric-grid" aria-label="Gateway metrics">
@@ -68,6 +68,15 @@
         <div><dt>Average latency</dt><dd id="service-details-latency"></dd></div>
         <div><dt>Requests / min</dt><dd id="service-details-requests"></dd></div>
       </dl>
+    </dialog>
+    <dialog class="detail-dialog utility-dialog" id="notifications-dialog" aria-labelledby="notifications-title">
+      <div class="dialog-heading"><div><div class="panel-kicker">ACTIVITY CENTER</div><h2 id="notifications-title">Notifications</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Close notifications">×</button></div>
+      <div class="notification-list" id="notification-list"></div>
+      <button class="text-button mark-read-button" id="mark-notifications-read" type="button">Mark all as read</button>
+    </dialog>
+    <dialog class="detail-dialog utility-dialog" id="help-dialog" aria-labelledby="help-title">
+      <div class="dialog-heading"><div><div class="panel-kicker">QUICK GUIDE</div><h2 id="help-title">Using the gateway console</h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Close help">×</button></div>
+      <div class="help-content"><p>Monitor gateway traffic, service health, and circuit breaker state from this overview.</p><ul><li>Search or filter the service inventory, then click a column heading to sort.</li><li>Open a service row’s details button to inspect its current demo metrics.</li><li>Reset the open breaker to start a simulated health probe.</li><li>Use the time range selector to explore the sample traffic chart.</li></ul><p class="help-note">This console uses local demo data and does not connect to a gateway API.</p></div>
     </dialog>
   </body>
 </html>
