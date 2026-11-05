@@ -59,5 +59,15 @@
       </main>
     </div>
     <div class="toast-viewport" id="toast-viewport" aria-live="polite" aria-atomic="true"></div>
+    <dialog class="detail-dialog" id="service-details-dialog" aria-labelledby="service-details-title">
+      <div class="dialog-heading"><div><div class="panel-kicker">SERVICE DETAILS</div><h2 id="service-details-title"></h2></div><button class="icon-button" type="button" data-close-dialog aria-label="Close service details">×</button></div>
+      <p class="dialog-service-id" id="service-details-id"></p>
+      <dl class="detail-grid">
+        <div><dt>Health · breaker</dt><dd id="service-details-status"></dd></div>
+        <div><dt>Instances</dt><dd id="service-details-instances"></dd></div>
+        <div><dt>Average latency</dt><dd id="service-details-latency"></dd></div>
+        <div><dt>Requests / min</dt><dd id="service-details-requests"></dd></div>
+      </dl>
+    </dialog>
   </body>
 </html>

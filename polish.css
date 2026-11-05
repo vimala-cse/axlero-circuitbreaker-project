@@ -464,6 +464,24 @@ h1 {
 }
 button:disabled { cursor: default; }
 
+.detail-dialog {
+  width: min(460px, calc(100vw - 32px));
+  padding: 22px;
+  border: 1px solid #35465a;
+  border-radius: 14px;
+  color: var(--text);
+  background: linear-gradient(145deg, #172333, #101722);
+  box-shadow: 0 28px 90px #000a, inset 0 1px #ffffff0d;
+}
+.detail-dialog::backdrop { background: #03070dc9; backdrop-filter: blur(4px); }
+.dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.dialog-heading h2 { font: 600 19px var(--display); }
+.dialog-service-id { margin-top: 6px; color: #a1adbf; font: 11px var(--mono); }
+.detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 22px 0 0; }
+.detail-grid div { padding: 12px; border: 1px solid #2b394b; border-radius: 8px; background: #101925; }
+.detail-grid dt { color: #9aa8ba; font-size: 10px; }
+.detail-grid dd { margin: 7px 0 0; color: #eef3f9; font: 12px var(--mono); }
+
 @media (max-width: 1100px) {
   .main-content { padding-left: 26px; padding-right: 26px; }
   .metric-grid { gap: 11px; }
