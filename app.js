@@ -35,7 +35,7 @@ function showToast(message) {
   }, 2800);
 }
 
-function renderServices() {
+function getVisibleServices() {
   const query = document.querySelector('#service-search').value.trim().toLowerCase();
   const statusFilter = document.querySelector('#service-filter').value;
   const filteredServices = services.filter((service) => {
@@ -46,13 +46,17 @@ function renderServices() {
       || (['healthy', 'degraded'].includes(statusFilter) && service.status === statusFilter);
     return matchesQuery && matchesStatus;
   });
-  const sortedServices = [...filteredServices].sort((left, right) => {
+  return [...filteredServices].sort((left, right) => {
     if (!serviceSort.field) return 0;
     const leftValue = serviceSort.field === 'name' ? left.name : left[serviceSort.field];
     const rightValue = serviceSort.field === 'name' ? right.name : right[serviceSort.field];
     return (typeof leftValue === 'string' ? leftValue.localeCompare(rightValue) : leftValue - rightValue) * serviceSort.direction;
   });
-  serviceRows.innerHTML = sortedServices.map((service) => {
+}
+
+function renderServices() {
+  const filteredServices = getVisibleServices();
+  serviceRows.innerHTML = filteredServices.map((service) => {
     const healthLabel = service.status === 'degraded' ? 'Degraded' : 'Healthy';
     const breakerClass = service.breaker === 'OPEN' ? 'open' : service.breaker === 'HALF-OPEN' ? 'half' : '';
     const latencyClass = service.latency > 150 ? 'slow' : '';
@@ -71,6 +75,7 @@ function renderServices() {
   document.querySelector('#service-total').textContent = services.length;
   document.querySelector('#nav-service-count').textContent = services.length;
   document.querySelector('#showing-count').textContent = filteredServices.length;
+  document.querySelector('#export-services').disabled = filteredServices.length === 0;
 }
 
 function chartPath(values, width, height, max) {
@@ -204,6 +209,30 @@ document.querySelector('#refresh-services').addEventListener('click', (event) =>
   document.querySelector('#last-refreshed').textContent = 'just now';
   window.setTimeout(() => button.classList.remove('spinning'), 650);
   showToast('Demo service registry is up to date');
+});
+
+document.querySelector('#export-services').addEventListener('click', () => {
+  const visibleServices = getVisibleServices();
+  if (!visibleServices.length) return;
+  const fields = [
+    ['Service', (service) => service.name],
+    ['Service ID', (service) => service.detail],
+    ['Health', (service) => service.status],
+    ['Instances', (service) => service.instances],
+    ['Average latency (ms)', (service) => service.latency],
+    ['Requests per minute', (service) => service.requests],
+    ['Circuit breaker', (service) => service.breaker],
+  ];
+  const csvCell = (value) => `"${String(value).replaceAll('"', '""')}"`;
+  const csv = [fields.map(([label]) => csvCell(label)).join(','), ...visibleServices.map((service) => fields.map(([, value]) => csvCell(value(service))).join(','))].join('\r\n');
+  const file = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `circuitbreaker-services-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast(`Exported ${visibleServices.length} service${visibleServices.length === 1 ? '' : 's'} to CSV`);
 });
 
 document.querySelector('#traffic-range').addEventListener('change', (event) => {
