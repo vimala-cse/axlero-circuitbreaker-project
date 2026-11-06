@@ -691,3 +691,165 @@ footer span {
     align-items: flex-start;
   }
 }
+
+
+/* WEEK 4 - MONITORING PAGE */
+
+.week4-page {
+  padding: 24px;
+  color: var(--text-primary, #e5e7eb);
+}
+
+.week4-heading {
+  margin-bottom: 24px;
+}
+
+.week4-heading h2 {
+  font-size: 25px;
+  margin: 0 0 8px;
+}
+
+.week4-heading p,
+.week4-card p {
+  color: var(--text-secondary, #9ca3af);
+  line-height: 1.6;
+}
+
+.week4-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.week4-card {
+  background: var(--card-bg, #1e293b);
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.week4-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.week4-card-title h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.week4-card label {
+  display: block;
+  margin: 18px 0 8px;
+}
+
+.week4-card select {
+  width: 100%;
+  padding: 11px;
+  border-radius: 8px;
+  border: 1px solid #475569;
+  background: #0f172a;
+  color: white;
+  margin-bottom: 14px;
+}
+
+.week4-primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.week4-primary-button:hover {
+  background: #1d4ed8;
+}
+
+.week4-primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.week4-result,
+.week4-info {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 9px;
+  background: var(--result-bg, #0f172a);
+  overflow-wrap: anywhere;
+}
+
+.week4-result h4 {
+  margin-top: 0;
+}
+
+.week4-hint {
+  font-size: 13px;
+  margin-top: 15px;
+}
+
+.week4-service-list {
+  margin-top: 20px;
+}
+
+.week4-service-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border-color, #334155);
+}
+
+.week4-up {
+  color: #22c55e;
+}
+
+.week4-down {
+  color: #ef4444;
+}
+
+.week4-unknown {
+  color: #f59e0b;
+}
+
+.week4-error {
+  color: #ef4444;
+  margin-top: 18px;
+}
+
+.week4-instructions {
+  margin-top: 24px;
+  padding: 22px;
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 14px;
+  background: var(--card-bg, #1e293b);
+}
+
+.week4-instructions h3 {
+  margin-top: 0;
+}
+
+.week4-instructions li {
+  margin: 12px 0;
+  line-height: 1.5;
+}
+
+@media (max-width: 750px) {
+  .week4-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .week4-page {
+    padding: 14px;
+  }
+}

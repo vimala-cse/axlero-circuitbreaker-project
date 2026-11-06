@@ -25,6 +25,8 @@ import {
   testTimeLimiter
 } from './services/api'
 
+import Week4Monitoring from './components/Week4Monitoring'
+
 import './App.css'
 
 const menuItems = [
@@ -33,7 +35,8 @@ const menuItems = [
   { id: 'inventory', label: 'Inventory', icon: Boxes },
   { id: 'recommendations', label: 'Recommendations', icon: Sparkles },
   { id: 'health', label: 'Service Health', icon: Activity },
-  { id: 'circuit', label: 'Circuit Breaker', icon: ShieldCheck }
+  { id: 'circuit', label: 'Circuit Breaker', icon: ShieldCheck },
+  { id: 'week4', label: 'Week 4 Monitoring', icon: Activity }
 ]
 
 function App() {
@@ -451,7 +454,7 @@ function App() {
             <strong>Gateway : 8080</strong>
           </div>
 
-          <p>Week 1, Week 2 &amp; Week 3</p>
+          <p>Week 1, Week 2, Week 3 &amp; Week 4</p>
         </div>
       </aside>
 
@@ -544,6 +547,11 @@ function App() {
             week3Results={week3Results}
             loading={loading}
           />
+        )}
+
+          {/* WEEK 4 - DISTRIBUTED MONITORING */}
+        {page === 'week4' && (
+          <Week4Monitoring />
         )}
 
         <footer>
