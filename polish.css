@@ -120,10 +120,11 @@ h1 { font-size: clamp(28px, 3vw, 36px); letter-spacing: -1.5px; }
 
 @media (max-width: 540px) {
   .services-header { align-items: stretch; }
-  .service-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .service-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
   .service-actions .search-box { grid-column: 1 / -1; width: 100%; min-height: 36px; }
   .service-actions .range-select { min-height: 36px; font-size: 10px; }
   .service-actions .refresh-button { width: 36px; height: 36px; }
+  .service-actions .export-button { min-height: 36px; }
   .panel-controls { flex-wrap: wrap; justify-content: flex-end; }
   .panel-legend { margin-right: auto; }
   .chart-axis { font-size: 7px; }
@@ -350,6 +351,9 @@ h1 {
   background: #172230;
 }
 .service-actions { gap: 8px; }
+.export-button { min-height: 29px; padding: 0 10px; border: 1px solid #355047; border-radius: 6px; color: #a9ebd1; background: #14251f; font: 10px var(--sans); cursor: pointer; transition: background .18s ease, border-color .18s ease; }
+.export-button:hover:not(:disabled) { border-color: #528a70; background: #1a3429; }
+.export-button:disabled { opacity: .45; cursor: not-allowed; }
 .search-box {
   border-color: #334052;
   background: #151e2b;
