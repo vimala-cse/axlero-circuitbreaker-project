@@ -40,7 +40,10 @@ function renderServices() {
   const statusFilter = document.querySelector('#service-filter').value;
   const filteredServices = services.filter((service) => {
     const matchesQuery = `${service.name} ${service.detail}`.toLowerCase().includes(query);
-    const matchesStatus = statusFilter === 'all' || (statusFilter === 'open' ? service.breaker === 'OPEN' : service.status === statusFilter);
+    const matchesStatus = statusFilter === 'all'
+      || (statusFilter === 'open' && service.breaker === 'OPEN')
+      || (statusFilter === 'half-open' && service.breaker === 'HALF-OPEN')
+      || (['healthy', 'degraded'].includes(statusFilter) && service.status === statusFilter);
     return matchesQuery && matchesStatus;
   });
   const sortedServices = [...filteredServices].sort((left, right) => {
