@@ -50,3 +50,13 @@ export const testBulkhead = (seconds = 5) =>
 // Week 3: TimeLimiter
 export const testTimeLimiter = (seconds = 4) =>
   request(`/api/recommendations/timelimit?seconds=${seconds}`)
+
+// WEEK 4 - LATENCY TEST
+export const testLatency = (seconds = 3) =>
+  request(`/api/recommendations/delay?seconds=${seconds}`)
+
+// WEEK 4 - SERVICE HEALTH
+// Reuse your existing getServiceHealth(service) function.
+
+// WEEK 4 - ZIPKIN
+export const ZIPKIN_URL = 'http://localhost:9411/zipkin/'
