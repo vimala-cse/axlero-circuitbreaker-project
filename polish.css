@@ -354,6 +354,8 @@ h1 {
 .export-button { min-height: 29px; padding: 0 10px; border: 1px solid #355047; border-radius: 6px; color: #a9ebd1; background: #14251f; font: 10px var(--sans); cursor: pointer; transition: background .18s ease, border-color .18s ease; }
 .export-button:hover:not(:disabled) { border-color: #528a70; background: #1a3429; }
 .export-button:disabled { opacity: .45; cursor: not-allowed; }
+.event-controls { display: flex; align-items: center; gap: 12px; }
+.events-empty { padding: 22px 8px; border-top: 1px solid #293444; color: #9eabbd; font-size: 11px; text-align: center; }
 .search-box {
   border-color: #334052;
   background: #151e2b;
@@ -523,6 +525,8 @@ button:disabled { cursor: default; }
 }
 
 @media (max-width: 540px) {
+  .event-controls { gap: 7px; }
+  .event-controls .range-select { max-width: 112px; }
   .detail-dialog { padding: 17px; }
   .utility-dialog { max-height: 84vh; }
   .notification-item { grid-template-columns: 26px minmax(0, 1fr); }

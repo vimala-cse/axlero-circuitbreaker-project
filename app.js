@@ -115,7 +115,10 @@ function renderTrafficChart(range = '1h') {
 }
 
 function renderEvents() {
-  eventList.innerHTML = events.map((event) => `<div class="event-row"><span class="event-icon ${event.tone}">${event.icon}</span><div class="event-copy"><strong>${event.title}</strong> · ${event.target}<span>${event.detail}</span></div><time class="event-time">${event.time}</time></div>`).join('');
+  const category = document.querySelector('#event-filter').value;
+  const visibleEvents = category === 'all' ? events : events.filter((event) => event.tone === category);
+  eventList.innerHTML = visibleEvents.map((event) => `<div class="event-row"><span class="event-icon ${event.tone}">${event.icon}</span><div class="event-copy"><strong>${event.title}</strong> · ${event.target}<span>${event.detail}</span></div><time class="event-time">${event.time}</time></div>`).join('');
+  document.querySelector('#events-empty').hidden = visibleEvents.length > 0;
 }
 
 function updateBreakerSummary() {
@@ -149,6 +152,12 @@ function renderNotifications() {
 renderServices();
 renderTrafficChart();
 renderEvents();
+
+document.querySelector('#event-filter').addEventListener('change', renderEvents);
+document.querySelector('#reset-event-filter').addEventListener('click', () => {
+  document.querySelector('#event-filter').value = 'all';
+  renderEvents();
+});
 
 document.querySelector('#service-search').addEventListener('input', renderServices);
 document.querySelector('#service-filter').addEventListener('change', renderServices);
