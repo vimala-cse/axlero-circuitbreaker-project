@@ -693,59 +693,59 @@ footer span {
 }
 
 
-/* WEEK 4 - MONITORING PAGE */
+/* Observability page */
 
-.week4-page {
+.observability-page {
   padding: 24px;
   color: var(--text-primary, #e5e7eb);
 }
 
-.week4-heading {
+.observability-heading {
   margin-bottom: 24px;
 }
 
-.week4-heading h2 {
+.observability-heading h2 {
   font-size: 25px;
   margin: 0 0 8px;
 }
 
-.week4-heading p,
-.week4-card p {
+.observability-heading p,
+.observability-card p {
   color: var(--text-secondary, #9ca3af);
   line-height: 1.6;
 }
 
-.week4-grid {
+.observability-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 
-.week4-card {
+.observability-card {
   background: var(--card-bg, #1e293b);
   border: 1px solid var(--border-color, #334155);
   border-radius: 14px;
   padding: 22px;
 }
 
-.week4-card-title {
+.observability-card-title {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 12px;
 }
 
-.week4-card-title h3 {
+.observability-card-title h3 {
   margin: 0;
   font-size: 18px;
 }
 
-.week4-card label {
+.observability-card label {
   display: block;
   margin: 18px 0 8px;
 }
 
-.week4-card select {
+.observability-card select {
   width: 100%;
   padding: 11px;
   border-radius: 8px;
@@ -755,7 +755,7 @@ footer span {
   margin-bottom: 14px;
 }
 
-.week4-primary-button {
+.observability-primary-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -770,17 +770,17 @@ footer span {
   margin-top: 12px;
 }
 
-.week4-primary-button:hover {
+.observability-primary-button:hover {
   background: #1d4ed8;
 }
 
-.week4-primary-button:disabled {
+.observability-primary-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.week4-result,
-.week4-info {
+.observability-result,
+.observability-info {
   margin-top: 18px;
   padding: 14px;
   border-radius: 9px;
@@ -788,20 +788,20 @@ footer span {
   overflow-wrap: anywhere;
 }
 
-.week4-result h4 {
+.observability-result h4 {
   margin-top: 0;
 }
 
-.week4-hint {
+.observability-hint {
   font-size: 13px;
   margin-top: 15px;
 }
 
-.week4-service-list {
+.observability-service-list {
   margin-top: 20px;
 }
 
-.week4-service-row {
+.observability-service-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -810,24 +810,24 @@ footer span {
   border-bottom: 1px solid var(--border-color, #334155);
 }
 
-.week4-up {
+.observability-up {
   color: #22c55e;
 }
 
-.week4-down {
+.observability-down {
   color: #ef4444;
 }
 
-.week4-unknown {
+.observability-unknown {
   color: #f59e0b;
 }
 
-.week4-error {
+.observability-error {
   color: #ef4444;
   margin-top: 18px;
 }
 
-.week4-instructions {
+.observability-instructions {
   margin-top: 24px;
   padding: 22px;
   border: 1px solid var(--border-color, #334155);
@@ -835,21 +835,524 @@ footer span {
   background: var(--card-bg, #1e293b);
 }
 
-.week4-instructions h3 {
+.observability-instructions h3 {
   margin-top: 0;
 }
 
-.week4-instructions li {
+.observability-instructions li {
   margin: 12px 0;
   line-height: 1.5;
 }
 
 @media (max-width: 750px) {
-  .week4-grid {
+  .observability-grid {
     grid-template-columns: 1fr;
   }
 
-  .week4-page {
+  .observability-page {
     padding: 14px;
+  }
+}
+
+/* Refined cloud operations console */
+.app-layout {
+  background:
+    radial-gradient(ellipse at 82% 0%, rgba(226, 229, 255, 0.35), transparent 34%),
+    var(--canvas, #f5f7fb);
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 264px;
+  padding: 27px 17px 20px;
+  background:
+    radial-gradient(circle at 5% 0%, rgba(97, 87, 232, 0.18), transparent 28%),
+    linear-gradient(175deg, #151a2d 0%, #111626 100%);
+  box-shadow: 12px 0 34px rgba(27, 35, 67, 0.06);
+}
+
+.brand {
+  padding-bottom: 36px;
+}
+
+.brand-icon {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, #8b83ff, #5f55e7 65%, #453ac2);
+  box-shadow: 0 8px 20px rgba(97, 87, 232, 0.36);
+}
+
+.brand-icon::after {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: inherit;
+  content: "";
+}
+
+.brand h2 {
+  letter-spacing: -0.035em;
+}
+
+.brand span {
+  color: #929ab0;
+}
+
+.menu-heading {
+  color: #737e98;
+  font-weight: 700;
+}
+
+.sidebar nav {
+  gap: 5px;
+}
+
+.nav-item {
+  position: relative;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #aab3c8;
+  font-weight: 500;
+}
+
+.nav-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.nav-item.active {
+  color: #fff;
+  border-color: rgba(153, 146, 255, 0.12);
+  background: linear-gradient(100deg, rgba(102, 91, 234, 0.3), rgba(98, 89, 217, 0.13));
+  box-shadow: inset 3px 0 #8e87ff;
+}
+
+.sidebar-bottom {
+  color: #8d97ad;
+}
+
+.backend-label {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.045);
+  line-height: 1.5;
+}
+
+.online-dot {
+  position: relative;
+  background: #31d6a5;
+  box-shadow: 0 0 0 4px rgba(49, 214, 165, 0.12);
+}
+
+.main-content {
+  max-width: 1740px;
+  margin: 0 auto;
+  padding: 32px clamp(22px, 3.2vw, 52px);
+}
+
+.topbar {
+  margin-bottom: 29px;
+}
+
+.breadcrumb {
+  color: #98a1b3;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.topbar h1 {
+  color: #172033;
+  font-size: clamp(22px, 2vw, 28px);
+  font-weight: 720;
+  letter-spacing: -0.045em;
+}
+
+.refresh-button {
+  min-height: 42px;
+  border-color: #e7eaf2;
+  border-radius: 10px;
+  color: #434b60;
+  box-shadow: 0 3px 10px rgba(36, 45, 70, 0.035);
+}
+
+.refresh-button:hover {
+  border-color: #d5d3ff;
+  color: var(--accent);
+  background: #fbfaff;
+}
+
+.welcome-card {
+  position: relative;
+  min-height: 226px;
+  border: 1px solid rgba(143, 136, 255, 0.28);
+  border-radius: 20px;
+  padding: clamp(25px, 4vw, 42px);
+  background:
+    radial-gradient(ellipse at 84% 45%, rgba(119, 111, 255, 0.25), transparent 32%),
+    linear-gradient(115deg, #1d2142 0%, #292765 52%, #423a9e 100%);
+  box-shadow: 0 16px 38px rgba(41, 39, 101, 0.15);
+}
+
+.welcome-card::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.17) 0.7px, transparent 0.7px);
+  background-size: 17px 17px;
+  content: "";
+  opacity: 0.2;
+  pointer-events: none;
+  mask-image: linear-gradient(90deg, transparent 35%, #000 100%);
+}
+
+.welcome-card > div:first-child {
+  position: relative;
+  z-index: 1;
+}
+
+.eyebrow {
+  color: #aaa5ff;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+
+.welcome-card h2 {
+  margin: 15px 0 10px;
+  font-size: clamp(25px, 3vw, 34px);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+}
+
+.welcome-card p {
+  max-width: 570px;
+  color: #d1d1ef;
+  font-size: 13px;
+}
+
+.hero-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 21px;
+  color: #e5e6ff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.hero-status .online-dot {
+  margin: 0;
+}
+
+.welcome-art {
+  position: relative;
+  width: 195px;
+  height: 160px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: #d4d2ff;
+}
+
+.hero-orbit {
+  position: absolute;
+  border: 1px solid rgba(202, 199, 255, 0.28);
+  border-radius: 50%;
+}
+
+.hero-orbit-one {
+  width: 142px;
+  height: 142px;
+}
+
+.hero-orbit-two {
+  width: 185px;
+  height: 185px;
+  border-style: dashed;
+  opacity: 0.65;
+}
+
+.hero-shield {
+  z-index: 1;
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 27px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.04));
+  box-shadow: 0 15px 42px rgba(12, 12, 40, 0.25), inset 0 1px rgba(255, 255, 255, 0.2);
+  transform: rotate(-7deg);
+}
+
+.stats-grid {
+  gap: 16px;
+  margin: 20px 0 31px;
+}
+
+.stat-card,
+.health-card,
+.content-card,
+.product-card {
+  border-color: #e8edf4;
+  border-radius: 15px;
+  box-shadow: 0 5px 16px rgba(35, 45, 75, 0.035);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.stat-card:hover,
+.health-card:hover,
+.product-card:hover {
+  border-color: #dcd9ff;
+  box-shadow: 0 12px 26px rgba(44, 49, 92, 0.075);
+  transform: translateY(-2px);
+}
+
+.stat-card {
+  min-height: 100px;
+  padding: 19px;
+}
+
+.stat-icon {
+  border-radius: 13px;
+}
+
+.stat-card p {
+  color: #8791a4;
+  font-weight: 500;
+}
+
+.stat-card h2 {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.section-heading {
+  margin-top: 31px;
+}
+
+.section-heading h2 {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.health-grid {
+  gap: 15px;
+}
+
+.health-card {
+  padding: 19px;
+}
+
+.health-card-top {
+  color: #7067e9;
+}
+
+.health-card h3 {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.status-pill {
+  padding: 6px 10px;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+.content-card {
+  padding: 23px;
+}
+
+.content-card h3 {
+  font-size: 15px;
+  letter-spacing: -0.02em;
+}
+
+.content-card p {
+  color: #7d879a;
+}
+
+.primary-button,
+.danger-button,
+.observability-primary-button {
+  min-height: 39px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.primary-button {
+  background: linear-gradient(135deg, #7167f0, #564bd2);
+  box-shadow: 0 5px 12px rgba(91, 78, 212, 0.16);
+}
+
+.primary-button:hover,
+.observability-primary-button:hover {
+  background: linear-gradient(135deg, #6358e1, #4940c2);
+  box-shadow: 0 7px 15px rgba(91, 78, 212, 0.2);
+}
+
+.quick-grid .content-card {
+  position: relative;
+  min-height: 187px;
+  padding-top: 25px;
+  overflow: hidden;
+}
+
+.quick-grid .content-card::before {
+  position: absolute;
+  top: 0;
+  left: 22px;
+  width: 35px;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, #7167f0, #35cdb0);
+  content: "";
+}
+
+.circuit-banner {
+  border-color: #dfdcff;
+  border-radius: 15px;
+  background: linear-gradient(115deg, #f0efff, #f9f8ff 70%);
+}
+
+.test-grid .content-card {
+  padding: 23px;
+}
+
+.observability-page {
+  padding: 0;
+  color: var(--ink);
+}
+
+.observability-heading h2 {
+  color: var(--ink);
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+
+.observability-heading p,
+.observability-card p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.observability-grid {
+  gap: 16px;
+}
+
+.observability-card,
+.observability-instructions {
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface);
+  box-shadow: 0 5px 16px rgba(35, 45, 75, 0.035);
+}
+
+.observability-card-title {
+  color: var(--accent);
+}
+
+.observability-card-title h3,
+.observability-instructions h3 {
+  color: var(--ink);
+}
+
+.observability-card label {
+  color: #475168;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.observability-card select {
+  border-color: #e0e5ef;
+  border-radius: 10px;
+  background: #fbfcfe;
+  color: var(--ink);
+}
+
+.observability-primary-button {
+  background: linear-gradient(135deg, #7167f0, #564bd2);
+}
+
+.observability-result,
+.observability-info {
+  border: 1px solid #eceaf9;
+  background: #f8f8ff;
+  color: var(--ink);
+}
+
+.observability-info {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.observability-service-row {
+  border-color: var(--line);
+  color: #4d576d;
+  font-size: 12px;
+}
+
+.observability-unknown {
+  color: #9a6a13;
+}
+
+.observability-instructions {
+  margin-top: 18px;
+  padding: 23px;
+}
+
+.observability-instructions li {
+  color: #68748a;
+  font-size: 12px;
+}
+
+.notice {
+  border: 1px solid transparent;
+  border-radius: 11px;
+}
+
+.notice.success {
+  border-color: #cceedd;
+}
+
+.notice.error {
+  border-color: #f4d0d0;
+}
+
+.notice.info {
+  border-color: #d5e6ff;
+}
+
+footer {
+  color: #929bae;
+  line-height: 1.7;
+}
+
+@media (max-width: 1050px) {
+  .sidebar {
+    width: 244px;
+  }
+}
+
+@media (max-width: 700px) {
+  .sidebar {
+    position: fixed;
+    height: 100dvh;
+  }
+
+  .main-content {
+    padding: 20px 15px;
+  }
+
+  .welcome-card {
+    min-height: 0;
   }
 }

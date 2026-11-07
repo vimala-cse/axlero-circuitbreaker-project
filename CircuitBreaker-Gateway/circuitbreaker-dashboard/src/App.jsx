@@ -25,7 +25,7 @@ import {
   testTimeLimiter
 } from './services/api'
 
-import Week4Monitoring from './components/Week4Monitoring'
+import ObservabilityCenter from './components/ObservabilityCenter'
 
 import './App.css'
 
@@ -36,7 +36,7 @@ const menuItems = [
   { id: 'recommendations', label: 'Recommendations', icon: Sparkles },
   { id: 'health', label: 'Service Health', icon: Activity },
   { id: 'circuit', label: 'Circuit Breaker', icon: ShieldCheck },
-  { id: 'week4', label: 'Week 4 Monitoring', icon: Activity }
+  { id: 'observability', label: 'Observability', icon: Activity }
 ]
 
 function App() {
@@ -61,8 +61,7 @@ function App() {
 
   const [selectedProduct, setSelectedProduct] = useState('1')
 
-  // Week 3 test results
-  const [week3Results, setWeek3Results] = useState(null)
+  const [resilienceResults, setResilienceResults] = useState(null)
 
   useEffect(() => {
     loadDashboard()
@@ -145,7 +144,6 @@ function App() {
     }
   }
 
-  // WEEK 2: Single failure test
   async function testFailure() {
     setLoading(true)
     setMessage('Sending a simulated failure request...')
@@ -187,7 +185,6 @@ function App() {
     }
   }
 
-  // WEEK 2: Multiple failure test
   async function testMultipleFailures() {
     setLoading(true)
     setMessage('Sending 5 failure requests one by one...')
@@ -215,7 +212,6 @@ function App() {
     }
   }
 
-  // WEEK 2: Delay test
   async function testDelay() {
     setLoading(true)
     setMessage('Testing a 3-second recommendation delay...')
@@ -238,12 +234,11 @@ function App() {
     }
   }
 
-  // WEEK 3: Rate Limiter test
   async function runRateLimiterTest() {
     setLoading(true)
     setMessage('Sending 6 simultaneous recommendation requests...')
 
-    setWeek3Results(null)
+    setResilienceResults(null)
 
     try {
       const results = await Promise.allSettled(
@@ -273,7 +268,7 @@ function App() {
         }
       })
 
-      setWeek3Results({
+      setResilienceResults({
         title: 'Rate Limiter Results',
         results: summary
       })
@@ -294,12 +289,11 @@ function App() {
     }
   }
 
-  // WEEK 3: Bulkhead test
   async function runBulkheadTest() {
     setLoading(true)
     setMessage('Sending 3 simultaneous Bulkhead requests...')
 
-    setWeek3Results(null)
+    setResilienceResults(null)
 
     try {
       const results = await Promise.allSettled([
@@ -326,7 +320,7 @@ function App() {
         }
       })
 
-      setWeek3Results({
+      setResilienceResults({
         title: 'Bulkhead Results',
         results: summary
       })
@@ -347,17 +341,16 @@ function App() {
     }
   }
 
-  // WEEK 3: Time Limiter test
   async function runTimeLimiterTest() {
     setLoading(true)
     setMessage('Testing the Time Limiter with a 4-second request...')
 
-    setWeek3Results(null)
+    setResilienceResults(null)
 
     try {
       const result = await testTimeLimiter(4)
 
-      setWeek3Results({
+      setResilienceResults({
         title: 'Time Limiter Results',
         results: [
           {
@@ -371,7 +364,7 @@ function App() {
       setMessage('Time Limiter request completed. Check the returned response.')
       setMessageType('success')
     } catch (error) {
-      setWeek3Results({
+      setResilienceResults({
         title: 'Time Limiter Results',
         results: [
           {
@@ -454,7 +447,7 @@ function App() {
             <strong>Gateway : 8080</strong>
           </div>
 
-          <p>Week 1, Week 2, Week 3 &amp; Week 4</p>
+          <p>Resilience · Monitoring · Insights</p>
         </div>
       </aside>
 
@@ -544,14 +537,13 @@ function App() {
             onRateLimit={runRateLimiterTest}
             onBulkhead={runBulkheadTest}
             onTimeLimiter={runTimeLimiterTest}
-            week3Results={week3Results}
+            resilienceResults={resilienceResults}
             loading={loading}
           />
         )}
 
-          {/* WEEK 4 - DISTRIBUTED MONITORING */}
-        {page === 'week4' && (
-          <Week4Monitoring />
+        {page === 'observability' && (
+          <ObservabilityCenter />
         )}
 
         <footer>
@@ -579,16 +571,19 @@ function Dashboard({
     <>
       <section className="welcome-card">
         <div>
-          <span className="eyebrow">SYSTEM OVERVIEW</span>
-          <h2>Welcome to CircuitBreaker</h2>
+          <span className="eyebrow">CLOUD PLATFORM / LIVE CONTROL PLANE</span>
+          <h2>Your services, at a glance.</h2>
           <p>
-            Monitor your e-commerce microservices, explore products
-            and test fault tolerance through the API Gateway.
+            Explore your service landscape, inspect commerce data and validate
+            resilience — all from one command center.
           </p>
+          <span className="hero-status"><span className="online-dot" /> LIVE SYSTEM OVERVIEW</span>
         </div>
 
         <div className="welcome-art">
-          <ShieldCheck size={90} />
+          <div className="hero-orbit hero-orbit-one" />
+          <div className="hero-orbit hero-orbit-two" />
+          <div className="hero-shield"><ShieldCheck size={58} /></div>
         </div>
       </section>
 
@@ -890,7 +885,7 @@ function CircuitBreaker({
   onRateLimit,
   onBulkhead,
   onTimeLimiter,
-  week3Results,
+  resilienceResults,
   loading
 }) {
   return (
@@ -918,7 +913,7 @@ function CircuitBreaker({
 
       <div className="section-heading">
         <div>
-          <h2>Week 2 - Circuit Breaker</h2>
+          <h2>Circuit Breaker</h2>
           <p>Test Recommendation Service failures and fallback behavior</p>
         </div>
       </div>
@@ -1001,7 +996,7 @@ function CircuitBreaker({
 
       <div className="section-heading">
         <div>
-          <h2>Week 3 - Advanced Resilience</h2>
+          <h2>Traffic &amp; Fault Isolation</h2>
           <p>Test Rate Limiter, Bulkhead and Time Limiter</p>
         </div>
       </div>
@@ -1070,12 +1065,12 @@ function CircuitBreaker({
         </div>
       )}
 
-      {week3Results && (
+      {resilienceResults && (
         <div className="content-card">
-          <h3>{week3Results.title}</h3>
+          <h3>{resilienceResults.title}</h3>
 
           <div className="inventory-result">
-            {week3Results.results.map((item, index) => (
+            {resilienceResults.results.map((item, index) => (
               <div key={index}>
                 <p>
                   <strong>Request {item.request}:</strong>{' '}
@@ -1098,7 +1093,7 @@ function CircuitBreaker({
       )}
 
       <div className="content-card instructions">
-        <h3>Week 3 Testing Instructions</h3>
+        <h3>Resilience test runbook</h3>
 
         <ol>
           <li>Start Eureka Server and all three microservices.</li>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
   Activity,
   Clock,
@@ -21,7 +21,7 @@ const services = [
   { name: 'Recommendation Service', key: 'recommendation' }
 ]
 
-export default function Week4Monitoring() {
+export default function ObservabilityCenter() {
   const [seconds, setSeconds] = useState(3)
   const [latencyResult, setLatencyResult] = useState(null)
   const [loadingLatency, setLoadingLatency] = useState(false)
@@ -70,7 +70,7 @@ export default function Week4Monitoring() {
         try {
           const result = await getServiceHealth(service.key)
           results[service.key] = {
-            status: result?.status || 'UP',
+            status: result?.status || 'UNKNOWN',
             details: result
           }
         } catch (err) {
@@ -91,10 +91,10 @@ export default function Week4Monitoring() {
   }
 
   return (
-    <div className="week4-page">
-      <div className="week4-heading">
+    <div className="observability-page">
+      <div className="observability-heading">
         <div>
-          <h2>Week 4 – Distributed Tracing & Monitoring</h2>
+          <h2>Observability &amp; Performance</h2>
           <p>
             Monitor service health, test API latency and inspect distributed
             traces using Zipkin.
@@ -102,9 +102,9 @@ export default function Week4Monitoring() {
         </div>
       </div>
 
-      <div className="week4-grid">
-        <section className="week4-card">
-          <div className="week4-card-title">
+      <div className="observability-grid">
+        <section className="observability-card">
+          <div className="observability-card-title">
             <Clock size={22} />
             <h3>Latency Testing</h3>
           </div>
@@ -129,7 +129,7 @@ export default function Week4Monitoring() {
           </select>
 
           <button
-            className="week4-primary-button"
+            className="observability-primary-button"
             onClick={runLatencyTest}
             disabled={loadingLatency}
           >
@@ -138,7 +138,7 @@ export default function Week4Monitoring() {
           </button>
 
           {latencyResult && (
-            <div className="week4-result">
+            <div className="observability-result" aria-live="polite">
               <h4>
                 {latencyResult.success ? 'Request Completed' : 'Request Failed'}
               </h4>
@@ -156,8 +156,8 @@ export default function Week4Monitoring() {
           )}
         </section>
 
-        <section className="week4-card">
-          <div className="week4-card-title">
+        <section className="observability-card">
+          <div className="observability-card-title">
             <Activity size={22} />
             <h3>Distributed Tracing</h3>
           </div>
@@ -167,27 +167,27 @@ export default function Week4Monitoring() {
             Spring Boot services.
           </p>
 
-          <div className="week4-info">
+          <div className="observability-info">
             <span>Zipkin address</span>
             <strong>localhost:9411</strong>
           </div>
 
           <button
-            className="week4-primary-button"
+            className="observability-primary-button"
             onClick={openZipkin}
           >
             <ExternalLink size={17} />
             Open Zipkin Dashboard
           </button>
 
-          <p className="week4-hint">
+          <p className="observability-hint">
             Run a backend API request first, then open Zipkin and select
             Run Query to find the trace.
           </p>
         </section>
 
-        <section className="week4-card week4-health-card">
-          <div className="week4-card-title">
+        <section className="observability-card observability-health-card">
+          <div className="observability-card-title">
             <Server size={22} />
             <h3>Microservice Health</h3>
           </div>
@@ -195,7 +195,7 @@ export default function Week4Monitoring() {
           <p>Check whether your backend services are responding.</p>
 
           <button
-            className="week4-primary-button"
+            className="observability-primary-button"
             onClick={checkServiceHealth}
             disabled={loadingHealth}
           >
@@ -203,21 +203,21 @@ export default function Week4Monitoring() {
             {loadingHealth ? 'Checking...' : 'Check All Services'}
           </button>
 
-          <div className="week4-service-list">
+          <div className="observability-service-list">
             {services.map((service) => {
               const result = health[service.key]
               const isUp = result?.status === 'UP'
 
               return (
-                <div className="week4-service-row" key={service.key}>
+                <div className="observability-service-row" key={service.key}>
                   <span>{service.name}</span>
                   <strong
                     className={
                       !result
-                        ? 'week4-unknown'
+                        ? 'observability-unknown'
                         : isUp
-                          ? 'week4-up'
-                          : 'week4-down'
+                          ? 'observability-up'
+                          : 'observability-down'
                     }
                   >
                     {result ? result.status : 'NOT CHECKED'}
@@ -229,10 +229,10 @@ export default function Week4Monitoring() {
         </section>
       </div>
 
-      {error && <p className="week4-error">{error}</p>}
+      {error && <p className="observability-error">{error}</p>}
 
-      <section className="week4-instructions">
-        <h3>Final Project Demo – Testing Sequence</h3>
+      <section className="observability-instructions">
+        <h3>Operations checklist</h3>
         <ol>
           <li>Start Zipkin on port 9411.</li>
           <li>Start Eureka Server on port 8761.</li>
@@ -241,7 +241,7 @@ export default function Week4Monitoring() {
           <li>Start the React frontend.</li>
           <li>Run a latency test or open another API page.</li>
           <li>Open Zipkin and select Run Query to inspect available traces.</li>
-          <li>Test the Week 2 Circuit Breaker and Week 3 Rate Limiter and Bulkhead features.</li>
+          <li>Explore the Circuit Breaker, Rate Limiter and Bulkhead controls.</li>
         </ol>
       </section>
     </div>

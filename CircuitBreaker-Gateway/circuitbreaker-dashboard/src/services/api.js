@@ -26,8 +26,6 @@ async function request(url) {
   return data
 }
 
-// WEEK 1 - PRODUCT, INVENTORY AND RECOMMENDATION APIs
-
 export const getProducts = () =>
   request('/api/products')
 
@@ -37,15 +35,11 @@ export const getInventory = (productId) =>
 export const getRecommendations = () =>
   request('/api/recommendations')
 
-// WEEK 2 - CIRCUIT BREAKER TESTING
-
 export const simulateRecommendationFailure = () =>
   request('/api/recommendations/failure')
 
 export const simulateRecommendationDelay = (seconds = 3) =>
   request(`/api/recommendations/delay?seconds=${seconds}`)
-
-// WEEK 3 - RATE LIMITER, BULKHEAD AND TIMELIMITER
 
 export const testBulkhead = (seconds = 5) =>
   request(`/api/recommendations/bulkhead?seconds=${seconds}`)
@@ -53,12 +47,8 @@ export const testBulkhead = (seconds = 5) =>
 export const testTimeLimiter = (seconds = 4) =>
   request(`/api/recommendations/timelimit?seconds=${seconds}`)
 
-// WEEK 4 - LATENCY TESTING
-
 export const testLatency = (seconds = 3) =>
   request(`/api/recommendations/delay?seconds=${seconds}`)
-
-// WEEK 4 - SERVICE HEALTH
 
 export const getServiceHealth = (service) =>
   request(`/health/${service}`)
@@ -94,7 +84,5 @@ export const getAllServiceHealth = async () => {
     }
   })
 }
-
-// ZIPKIN URL
 
 export const ZIPKIN_URL = 'http://localhost:9411/zipkin/'
