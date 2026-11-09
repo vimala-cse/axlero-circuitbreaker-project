@@ -47,6 +47,8 @@ const KIND_LABEL = { live: 'Live', fallback: 'Backup', blocked: 'Blocked', error
 
 const listOf = (d) => (Array.isArray(d) ? d : (d && (d.products || d.items || d.content || d.data)) || [])
 const rupees = (n) => '₹' + Number(n || 0).toLocaleString('en-IN')
+// Live answers are a plain list; backup answers are { fallback, recommendations }.
+const recsOf = (d) => (Array.isArray(d) ? d : (d && Array.isArray(d.recommendations) ? d.recommendations : []))
 const idOf = (x) => (x && typeof x === 'object' ? x.productId ?? x.id : x)
 const clock = () => new Date().toLocaleTimeString([], { hour12: false })
 
@@ -143,9 +145,13 @@ export default function App() {
       haveCatalog.current = true
     }
     if (s.ok) {
-      const map = {}
-      listOf(s.data).forEach((x) => { map[idOf(x)] = x.quantity ?? x.stock ?? x.available ?? x.inStock ?? 0 })
-      setStock(map)
+      if (Array.isArray(s.data)) {
+        const map = {}
+        s.data.forEach((x) => { map[idOf(x)] = x.quantity ?? x.stock ?? x.available ?? x.inStock ?? 0 })
+        setStock(map)
+      } else if (s.data && typeof s.data === 'object') {
+        setStock(s.data) // { "P-101": 42, ... }
+      }
     }
   }, [])
 
@@ -179,7 +185,7 @@ export default function App() {
     if (!auto || !gatewayUp) return undefined
     const t = setInterval(async () => {
       const { r, kind } = await fetchRec(selected)
-      setRec({ id: selected, kind, ms: r.ms, ids: (r.data && r.data.recommendations) || [] })
+      setRec({ id: selected, kind, ms: r.ms, ids: recsOf(r.data) })
     }, 2500)
     return () => clearInterval(t)
   }, [auto, gatewayUp, selected, fetchRec])
@@ -217,7 +223,7 @@ export default function App() {
   const pick = async (id) => {
     setSelected(id)
     const { r, kind } = await fetchRec(id)
-    setRec({ id, kind, ms: r.ms, ids: (r.data && r.data.recommendations) || [] })
+    setRec({ id, kind, ms: r.ms, ids: recsOf(r.data) })
   }
 
   // ---- derived state -------------------------------------------
