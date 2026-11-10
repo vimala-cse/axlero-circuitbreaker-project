@@ -25,9 +25,37 @@ import {
   testTimeLimiter
 } from './services/api'
 
+import laptopImage from './assets/laptop.jpg'
+import smartphoneImage from './assets/smartphone.jpg'
+import headphonesImage from './assets/headphones.jpg'
 import ObservabilityCenter from './components/ObservabilityCenter'
 
 import './App.css'
+
+function getFallbackProductImage(product, index) {
+  const name = `${product.name || product.productName || ''}`.toLowerCase()
+
+  if (/laptop|notebook|computer|macbook/.test(name)) {
+    return laptopImage
+  }
+
+  if (/headphone|earbud|audio|speaker/.test(name)) {
+    return headphonesImage
+  }
+
+  if (/phone|mobile|smartphone/.test(name)) {
+    return smartphoneImage
+  }
+
+  return [laptopImage, smartphoneImage, headphonesImage][index % 3]
+}
+
+function getProductImage(product, index) {
+  const image = product.imageUrl || product.image || product.thumbnail
+  return typeof image === 'string' && image.trim()
+    ? image
+    : getFallbackProductImage(product, index)
+}
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -581,9 +609,15 @@ function Dashboard({
         </div>
 
         <div className="welcome-art">
-          <div className="hero-orbit hero-orbit-one" />
-          <div className="hero-orbit hero-orbit-two" />
-          <div className="hero-shield"><ShieldCheck size={58} /></div>
+          <img
+            className="hero-photo"
+            src={laptopImage}
+            alt="Laptop on a bright desk"
+          />
+          <span className="hero-photo-caption">
+            <span className="online-dot" />
+            Commerce services, in sync
+          </span>
         </div>
       </section>
 
@@ -715,9 +749,18 @@ function Products({ products }) {
       ) : (
         <div className="product-grid">
           {products.map((product, index) => (
-            <div className="product-card" key={product.id ?? index}>
+            <article className="product-card" key={product.id ?? index}>
               <div className="product-art">
-                <Package size={45} />
+                <img
+                  src={getProductImage(product, index)}
+                  alt={product.name || product.productName || 'Product'}
+                  loading="lazy"
+                  onError={event => {
+                    event.currentTarget.onerror = null
+                    event.currentTarget.src = getFallbackProductImage(product, index)
+                  }}
+                />
+                <span className="product-image-label">IN CATALOG</span>
               </div>
 
               <div className="product-info">
@@ -737,7 +780,7 @@ function Products({ products }) {
                     : 'Price not provided'}
                 </strong>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}

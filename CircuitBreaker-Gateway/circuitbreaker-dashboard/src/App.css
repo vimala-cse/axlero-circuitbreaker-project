@@ -396,11 +396,36 @@ button:disabled {
 }
 
 .product-art {
-  height: 130px;
-  display: grid;
-  place-items: center;
-  color: #6552d5;
-  background: linear-gradient(135deg, #e9e6ff, #f4f2ff);
+  position: relative;
+  height: 190px;
+  overflow: hidden;
+  background: #f0f2f7;
+}
+
+.product-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 250ms ease;
+}
+
+.product-card:hover .product-art img {
+  transform: scale(1.035);
+}
+
+.product-image-label {
+  position: absolute;
+  top: 13px;
+  left: 13px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #485267;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .product-info {
@@ -1049,43 +1074,42 @@ footer span {
 
 .welcome-art {
   position: relative;
-  width: 195px;
-  height: 160px;
-  display: grid;
-  place-items: center;
+  width: min(32%, 300px);
+  height: 174px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.12);
   padding: 0;
-  color: #d4d2ff;
 }
 
-.hero-orbit {
+.hero-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-photo-caption {
   position: absolute;
-  border: 1px solid rgba(202, 199, 255, 0.28);
-  border-radius: 50%;
+  right: 9px;
+  bottom: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(23, 25, 55, 0.76);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
 }
 
-.hero-orbit-one {
-  width: 142px;
-  height: 142px;
-}
-
-.hero-orbit-two {
-  width: 185px;
-  height: 185px;
-  border-style: dashed;
-  opacity: 0.65;
-}
-
-.hero-shield {
-  z-index: 1;
-  width: 92px;
-  height: 92px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 27px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.04));
-  box-shadow: 0 15px 42px rgba(12, 12, 40, 0.25), inset 0 1px rgba(255, 255, 255, 0.2);
-  transform: rotate(-7deg);
+.hero-photo-caption .online-dot {
+  margin: 0;
 }
 
 .stats-grid {
