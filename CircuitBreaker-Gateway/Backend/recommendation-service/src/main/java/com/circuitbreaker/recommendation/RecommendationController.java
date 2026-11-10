@@ -1,3 +1,4 @@
+
 package com.circuitbreaker.recommendation;
 
 import java.util.List;
@@ -22,21 +23,19 @@ public class RecommendationController {
         this.resilienceService = resilienceService;
     }
 
+    // Normal recommendations
     @GetMapping
     public List<Map<String, Object>> getRecommendations() {
-
-        return List.of(
-            Map.of("id", 2, "name", "Mobile", "reason", "Popular product"),
-            Map.of("id", 3, "name", "Headphones", "reason", "Frequently purchased"),
-            Map.of("id", 1, "name", "Laptop", "reason", "Trending product")
-        );
+        return resilienceService.getRecommendations();
     }
 
     // WEEK 2: Failure simulation
     @GetMapping("/failure")
     public Map<String, Object> simulateFailure() {
 
-        System.out.println("Simulating Recommendation Service failure");
+        System.out.println(
+            "Simulating Recommendation Service failure"
+        );
 
         throw new ResponseStatusException(
             HttpStatus.INTERNAL_SERVER_ERROR,
@@ -63,22 +62,30 @@ public class RecommendationController {
 
         return resilienceService.getDelayedRecommendations(seconds);
     }
-    
+
+    // Delay simulation
     @GetMapping("/delay")
-    public String delay(@RequestParam(defaultValue = "3") int seconds)
-            throws InterruptedException {
+    public String delay(
+            @RequestParam(defaultValue = "3") int seconds) {
 
-        if (seconds < 1 || seconds > 10) {
-            throw new IllegalArgumentException(
-                "Seconds must be between 1 and 10");
+        validateSeconds(seconds);
+
+        try {
+            Thread.sleep(seconds * 1000L);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+
+            throw new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Recommendation delay was interrupted"
+            );
         }
-
-        Thread.sleep(seconds * 1000L);
 
         return "Recommendation response completed after "
                 + seconds + " seconds";
     }
 
+    // Common validation
     private void validateSeconds(int seconds) {
 
         if (seconds < 0 || seconds > 10) {
