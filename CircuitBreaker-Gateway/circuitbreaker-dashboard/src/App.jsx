@@ -22,7 +22,8 @@ import {
   simulateRecommendationFailure,
   simulateRecommendationDelay,
   testBulkhead,
-  testTimeLimiter
+  testTimeLimiter,
+  getCircuitBreakerState
 } from './services/api'
 
 import laptopImage from './assets/laptop.jpg'
@@ -90,10 +91,16 @@ function App() {
   const [selectedProduct, setSelectedProduct] = useState('1')
 
   const [resilienceResults, setResilienceResults] = useState(null)
+  const [circuitState, setCircuitState] = useState(null)
 
   useEffect(() => {
     loadDashboard()
     checkAllHealth()
+    refreshCircuitState()
+    const stateTimer = window.setInterval(refreshCircuitState, 2000)
+    return () => window.clearInterval(stateTimer)
+    // Initial dashboard load and polling are intentionally mounted once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function loadDashboard() {
@@ -129,6 +136,15 @@ function App() {
       setRecommendations([])
       setRecommendationMode('Unavailable')
       throw error
+    }
+  }
+
+  async function refreshCircuitState() {
+    try {
+      const state = await getCircuitBreakerState()
+      setCircuitState(state)
+    } catch {
+      setCircuitState(null)
     }
   }
 
@@ -174,40 +190,32 @@ function App() {
 
   async function testFailure() {
     setLoading(true)
-    setMessage('Sending a simulated failure request...')
-
+    setMessage('Sending one simulated HTTP 500 request...')
     try {
-      await simulateRecommendationFailure()
-
-      setMessage(
-        'The service returned a normal response. Check your backend configuration.'
-      )
-      setMessageType('info')
+      const response = await simulateRecommendationFailure()
+      if (response?.status === 'FALLBACK') {
+        setMessage('Single failure detected: the Gateway returned fallback data. One failure alone should not open the breaker.')
+        setMessageType('success')
+      } else {
+        setMessage('The request completed without a fallback response. Review the Gateway Circuit Breaker route.')
+        setMessageType('info')
+      }
     } catch (error) {
-      setMessage(
-        `Failure request received (HTTP ${error.status || 'error'}). ` +
-        'Repeat the test to reach the configured Circuit Breaker threshold.'
-      )
+      setMessage(`Single failure request returned HTTP ${error.status || 'ERROR'}: ${error.message}`)
       setMessageType('error')
     } finally {
-      setLoading(false)
+      await refreshCircuitState()
       await loadRecommendationsAfterTest()
+      setLoading(false)
     }
   }
 
   async function loadRecommendationsAfterTest() {
     try {
       const data = await getRecommendations()
-
-      const items = Array.isArray(data)
-        ? data
-        : data?.recommendations || []
-
+      const items = Array.isArray(data) ? data : data?.recommendations || []
       setRecommendations(items)
-
-      setRecommendationMode(
-        data?.status === 'FALLBACK' ? 'Fallback' : 'Normal'
-      )
+      setRecommendationMode(data?.status === 'FALLBACK' ? 'Fallback' : 'Normal')
     } catch {
       setRecommendationMode('Unavailable')
     }
@@ -215,26 +223,27 @@ function App() {
 
   async function testMultipleFailures() {
     setLoading(true)
-    setMessage('Sending 5 failure requests one by one...')
-
-    let failedRequests = 0
-
+    setMessage('Sending four simulated HTTP 500 requests to reach the configured breaker window...')
+    const outcomes = []
     try {
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 4; i++) {
         try {
-          await simulateRecommendationFailure()
-        } catch {
-          failedRequests++
+          const response = await simulateRecommendationFailure()
+          outcomes.push(response?.status === 'FALLBACK' ? 'FALLBACK' : 'UNEXPECTED_RESPONSE')
+        } catch (error) {
+          outcomes.push(`HTTP_${error.status || 'ERROR'}`)
         }
       }
-
+      await refreshCircuitState()
+      const state = await getCircuitBreakerState()
+      setCircuitState(state)
+      const fallbackCount = outcomes.filter(value => value === 'FALLBACK').length
+      setMessage(`${fallbackCount}/4 requests returned Gateway fallback. Circuit Breaker state: ${state.state}. If it is OPEN, wait 10 seconds for HALF_OPEN recovery.`)
+      setMessageType(state.state === 'OPEN' ? 'success' : 'info')
       await loadRecommendationsAfterTest()
-
-      setMessage(
-        `${failedRequests} failure responses received. ` +
-        'Now check whether the next recommendation request returns fallback data.'
-      )
-      setMessageType('info')
+    } catch (error) {
+      setMessage(`Multiple failure test could not complete: ${error.message}. Wait for the 10-second Gateway rate-limit window or Circuit Breaker recovery, then retry.`)
+      setMessageType('error')
     } finally {
       setLoading(false)
     }
@@ -242,23 +251,24 @@ function App() {
 
   async function testDelay() {
     setLoading(true)
-    setMessage('Testing a 3-second recommendation delay...')
-
+    setMessage('Sending four concurrent 3-second requests. This tests the Gateway slow-call threshold.')
+    const started = performance.now()
     try {
-      await simulateRecommendationDelay(3)
-
-      setMessage(
-        'Delay request completed. Check the Gateway timeout and Circuit Breaker settings.'
+      const results = await Promise.allSettled(
+        Array.from({ length: 4 }, () => simulateRecommendationDelay(3))
       )
-      setMessageType('success')
+      const elapsed = Math.round(performance.now() - started)
+      const completed = results.filter(item => item.status === 'fulfilled').length
+      await refreshCircuitState()
+      const state = await getCircuitBreakerState()
+      setCircuitState(state)
+      setMessage(`Delay test finished in ${elapsed} ms. ${completed}/4 requests completed. Circuit Breaker state: ${state.state}. The slow-call threshold is 2 seconds; allow recovery before running another test.`)
+      setMessageType(state.state === 'OPEN' ? 'success' : 'info')
     } catch (error) {
-      setMessage(
-        `Delayed request failed or timed out: ${error.message}`
-      )
+      setMessage(`Delay test failed: ${error.message}`)
       setMessageType('error')
     } finally {
       setLoading(false)
-      await loadRecommendationsAfterTest()
     }
   }
 
@@ -334,7 +344,7 @@ function App() {
         if (result.status === 'fulfilled') {
           return {
             request: index + 1,
-            status: 'SUCCESS',
+            status: Array.isArray(result.value) && result.value.some(item => String(item.name || '').includes('Fallback')) ? 'FALLBACK' : 'SUCCESS',
             details: JSON.stringify(result.value)
           }
         }
@@ -383,7 +393,7 @@ function App() {
         results: [
           {
             request: 1,
-            status: 'SUCCESS',
+            status: Array.isArray(result) && result.some(item => String(item.name || '').includes('Fallback')) ? 'FALLBACK' : 'SUCCESS',
             details: JSON.stringify(result)
           }
         ]
@@ -566,6 +576,8 @@ function App() {
             onBulkhead={runBulkheadTest}
             onTimeLimiter={runTimeLimiterTest}
             resilienceResults={resilienceResults}
+            circuitState={circuitState}
+            onRefreshCircuitState={refreshCircuitState}
             loading={loading}
           />
         )}
@@ -929,6 +941,8 @@ function CircuitBreaker({
   onBulkhead,
   onTimeLimiter,
   resilienceResults,
+  circuitState,
+  onRefreshCircuitState,
   loading
 }) {
   return (
@@ -952,6 +966,18 @@ function CircuitBreaker({
             It is not a direct reading of the internal breaker state.
           </p>
         </div>
+      </div>
+
+      <div className="breaker-state-card">
+        <div>
+          <span className="eyebrow">LIVE RESILIENCE4J STATE</span>
+          <h2 className={`breaker-state ${String(circuitState?.state || 'UNKNOWN').toLowerCase()}`}>
+            {circuitState?.state || 'UNKNOWN'}
+          </h2>
+          <p>Failure rate: {circuitState?.failureRate ?? 'N/A'}% · Slow-call rate: {circuitState?.slowCallRate ?? 'N/A'}%</p>
+          <p>Failed calls: {circuitState?.numberOfFailedCalls ?? 0} · Successful calls: {circuitState?.numberOfSuccessfulCalls ?? 0} · Rejected calls: {circuitState?.numberOfNotPermittedCalls ?? 0}</p>
+        </div>
+        <button className="primary-button" onClick={onRefreshCircuitState} disabled={loading}>Refresh State</button>
       </div>
 
       <div className="section-heading">
@@ -986,7 +1012,7 @@ function CircuitBreaker({
           <h3>Multiple Failure Test</h3>
 
           <p>
-            Send five failure requests sequentially to test the configured threshold.
+            Send four HTTP 500 requests sequentially. The Gateway breaker evaluates a four-call window.
           </p>
 
           <button
@@ -994,7 +1020,7 @@ function CircuitBreaker({
             onClick={onMultipleFailures}
             disabled={loading}
           >
-            Run 5 Failure Requests
+            Run 4 Failure Requests
           </button>
         </div>
 
@@ -1004,7 +1030,7 @@ function CircuitBreaker({
           <h3>Delay Test</h3>
 
           <p>
-            Send a recommendation request with a three-second delay.
+            Send four concurrent three-second requests to test the slow-call threshold.
           </p>
 
           <button
@@ -1031,9 +1057,9 @@ function CircuitBreaker({
         </ol>
 
         <p className="muted">
-          The breaker uses a sliding window of four calls and a 50% failure
-          threshold. The actual state is maintained by Resilience4j in the
-          Gateway; this page does not yet read a live breaker-state metric.
+          The breaker uses a four-call sliding window and a 50% failure threshold.
+          The state above is read directly from the Gateway Resilience4j registry.
+          Wait for the 10-second open-state period before testing recovery.
         </p>
       </div>
 
@@ -1089,7 +1115,7 @@ function CircuitBreaker({
           <h3>Time Limiter</h3>
 
           <p>
-            Send a four-second request to test the configured two-second timeout.
+            Send a four-second request to test the configured two-second TimeLimiter timeout.
           </p>
 
           <button
@@ -1119,7 +1145,7 @@ function CircuitBreaker({
                   <strong>Request {item.request}:</strong>{' '}
                   <span
                     className={
-                      item.status === 'SUCCESS'
+                      item.status === 'SUCCESS' || item.status === 'FALLBACK'
                         ? 'success-text'
                         : 'error-text'
                     }

@@ -1380,3 +1380,18 @@ footer {
     min-height: 0;
   }
 }
+
+
+/* Live Circuit Breaker state */
+.breaker-state-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  margin: 18px 0; padding: 22px; border: 1px solid var(--line);
+  border-radius: 14px; background: var(--surface, #fff);
+}
+.breaker-state-card h2 { margin: 8px 0; font-size: 25px; }
+.breaker-state-card p { margin: 5px 0; color: var(--muted, #68748a); font-size: 12px; }
+.breaker-state.closed { color: #16834a; }
+.breaker-state.open { color: #d13c3c; }
+.breaker-state.half_open { color: #b7791f; }
+.breaker-state.unknown { color: #8a94a6; }
+@media (max-width: 700px) { .breaker-state-card { align-items: flex-start; flex-direction: column; } }

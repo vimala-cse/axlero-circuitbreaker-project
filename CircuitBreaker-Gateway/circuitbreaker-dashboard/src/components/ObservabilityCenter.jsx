@@ -10,6 +10,7 @@ import {
 
 import {
   testLatency,
+  getCircuitBreakerState,
   getServiceHealth,
   ZIPKIN_URL
 } from '../services/api'
@@ -37,12 +38,21 @@ export default function ObservabilityCenter() {
     const start = performance.now()
 
     try {
-      const response = await testLatency(seconds)
+      const responses = await Promise.allSettled(
+        Array.from({ length: 4 }, () => testLatency(seconds))
+      )
+      const breaker = await getCircuitBreakerState()
       const end = performance.now()
+      const completed = responses.filter(item => item.status === 'fulfilled').length
 
       setLatencyResult({
-        success: true,
-        response,
+        success: completed === 4,
+        response: {
+          completedRequests: completed,
+          totalRequests: responses.length,
+          circuitBreakerState: breaker.state,
+          slowCallRate: breaker.slowCallRate
+        },
         duration: Math.round(end - start)
       })
     } catch (err) {
@@ -110,8 +120,7 @@ export default function ObservabilityCenter() {
           </div>
 
           <p>
-            Send a delayed request to the Recommendation Service through
-            the API Gateway.
+            Send four concurrent delayed requests through the Gateway to demonstrate slow-call detection and Circuit Breaker state changes.
           </p>
 
           <label htmlFor="latency-seconds">Delay duration</label>
@@ -121,8 +130,6 @@ export default function ObservabilityCenter() {
             value={seconds}
             onChange={(e) => setSeconds(Number(e.target.value))}
           >
-            <option value={1}>1 second</option>
-            <option value={2}>2 seconds</option>
             <option value={3}>3 seconds</option>
             <option value={4}>4 seconds</option>
             <option value={5}>5 seconds</option>

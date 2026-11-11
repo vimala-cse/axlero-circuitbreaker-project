@@ -13,6 +13,11 @@ export default defineConfig({
         changeOrigin: true
       },
 
+      '/monitor': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      },
+
       '/health/gateway': {
         target: 'http://localhost:8080',
         changeOrigin: true,
