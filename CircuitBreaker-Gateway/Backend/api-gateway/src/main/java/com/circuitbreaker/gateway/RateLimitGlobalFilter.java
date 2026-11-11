@@ -29,8 +29,9 @@ public class RateLimitGlobalFilter implements GlobalFilter, Ordered {
 
         String path = exchange.getRequest().getURI().getPath();
 
-        // Apply rate limiting only to Recommendation API
-        if (!path.startsWith("/api/recommendations")) {
+        // Apply rate limiting to the normal recommendations endpoint only.
+        // Failure, delay, Bulkhead and TimeLimiter endpoints remain independently testable.
+        if (!path.equals("/api/recommendations")) {
             return chain.filter(exchange);
         }
 
@@ -65,7 +66,7 @@ public class RateLimitGlobalFilter implements GlobalFilter, Ordered {
             );
 
             exchange.getResponse().getHeaders()
-                    .add("Retry-After", "10");
+                    .set("Retry-After", "10");
 
             return exchange.getResponse().setComplete();
         }
