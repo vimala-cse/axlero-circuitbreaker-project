@@ -20,6 +20,19 @@ const eventList = document.querySelector('#event-list');
 const toastViewport = document.querySelector('#toast-viewport');
 let toastTimer;
 let serviceSort = { field: null, direction: 1 };
+let lastRefreshedAt = Date.now();
+
+function updateRefreshAge() {
+  const elapsedSeconds = Math.floor((Date.now() - lastRefreshedAt) / 1000);
+  const label = elapsedSeconds < 60 ? 'just now' : `${Math.floor(elapsedSeconds / 60)}m ago`;
+  document.querySelector('#last-refreshed').textContent = label;
+  document.querySelector('#registry-last-refreshed').textContent = label;
+}
+
+function markRefreshed() {
+  lastRefreshedAt = Date.now();
+  updateRefreshAge();
+}
 
 function showToast(message) {
   const toast = document.createElement('div');
@@ -225,7 +238,7 @@ document.querySelector('#refresh-services').addEventListener('click', (event) =>
   const button = event.currentTarget;
   button.classList.remove('spinning');
   requestAnimationFrame(() => button.classList.add('spinning'));
-  document.querySelector('#last-refreshed').textContent = 'just now';
+  markRefreshed();
   window.setTimeout(() => button.classList.remove('spinning'), 650);
   showToast('Demo service registry is up to date');
 });
@@ -324,5 +337,5 @@ window.setInterval(() => {
   const requests = 24891 + Math.floor(Math.random() * 24);
   document.querySelector('#requests-value').textContent = number(requests);
   if (selectedTrafficRange === '1h') document.querySelector('#chart-total').textContent = number(requests);
-  document.querySelector('#last-refreshed').textContent = 'just now';
+  updateRefreshAge();
 }, 5000);
