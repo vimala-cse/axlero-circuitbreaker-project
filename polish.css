@@ -507,6 +507,9 @@ button:disabled { cursor: default; }
 .metric-clear:after { background: #57d69a14; }
 .metric-clear .trend-positive { color: #8becbf; }
 .trend-probing { color: var(--violet); }
+.skip-link { position: fixed; z-index: 100; top: 8px; left: 8px; padding: 10px 14px; transform: translateY(-150%); border: 1px solid #5ab8ad; border-radius: 7px; color: #f4fffc; background: #142822; box-shadow: 0 8px 28px #0008; }
+.skip-link:focus { transform: translateY(0); }
+section[id] { scroll-margin-top: 78px; }
 .detail-dialog[open] { animation: dialog-enter .18s ease-out both; }
 @keyframes dialog-enter { from { opacity: 0; transform: translateY(7px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
 

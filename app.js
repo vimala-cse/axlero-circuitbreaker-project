@@ -350,6 +350,13 @@ document.querySelectorAll('.nav-link').forEach((link) => {
   });
 });
 
+document.addEventListener('keydown', (event) => {
+  if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey || document.querySelector('dialog[open]')) return;
+  if (event.target.matches('input, textarea, select, [contenteditable="true"]')) return;
+  event.preventDefault();
+  document.querySelector('#service-search').focus();
+});
+
 window.setInterval(() => {
   const requests = 24891 + Math.floor(Math.random() * 24);
   document.querySelector('#requests-value').textContent = number(requests);
