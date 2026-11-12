@@ -90,19 +90,27 @@ const trafficSeries = {
   '1h': {
     requests: [46, 52, 44, 62, 53, 66, 71, 61, 76, 68, 82, 73, 84, 76, 91, 80, 89, 77, 94, 85, 97, 87, 100, 88, 96, 82, 94, 79, 89, 72, 85, 75, 92, 79, 96, 84, 98, 89, 100, 91],
     errors: [3, 4, 3, 6, 4, 5, 4, 7, 4, 3, 5, 7, 4, 6, 4, 5, 3, 6, 5, 4, 6, 4, 3, 5, 7, 4, 6, 3, 5, 4, 7, 5, 4, 6, 4, 5, 3, 5, 4, 6],
+    total: 24891,
+    errorRate: '0.06%',
   },
   '6h': {
     requests: [54, 61, 58, 68, 63, 74, 71, 82, 77, 88, 84, 96, 90, 101],
     errors: [4, 5, 3, 6, 5, 4, 7, 5, 4, 6, 5, 3, 6, 4],
+    total: 148206,
+    errorRate: '0.07%',
   },
   '24h': {
     requests: [38, 44, 49, 46, 55, 59, 53, 63, 68, 64, 73, 78, 71, 82, 87, 81, 92, 97, 89, 100],
     errors: [5, 4, 6, 4, 5, 7, 4, 5, 3, 6, 4, 5, 7, 4, 6, 3, 5, 4, 6, 4],
+    total: 581274,
+    errorRate: '0.08%',
   },
 };
 
+let selectedTrafficRange = '1h';
+
 function renderTrafficChart(range = '1h') {
-  const { requests, errors } = trafficSeries[range];
+  const { requests, errors, total, errorRate } = trafficSeries[range];
   const width = 680;
   const height = 104;
   const req = chartPath(requests, width, height, 105);
@@ -112,6 +120,8 @@ function renderTrafficChart(range = '1h') {
   const chart = document.querySelector('#traffic-chart');
   chart.setAttribute('aria-label', `Requests and errors over ${rangeLabel}`);
   chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="traffic-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4bd5bf" /><stop offset="1" stop-color="#4bd5bf" stop-opacity="0" /></linearGradient></defs>${grid}<path class="chart-area" fill="url(#traffic-fill)" d="${req} L${width},${height} L0,${height} Z"/><path class="chart-line requests" pathLength="100" d="${req}"/><path class="chart-line errors" pathLength="100" d="${err}"/></svg>`;
+  document.querySelector('#chart-total').textContent = number(total);
+  document.querySelector('.chart-error').innerHTML = `<i></i> ${errorRate} error rate`;
 }
 
 function renderEvents() {
@@ -246,6 +256,7 @@ document.querySelector('#export-services').addEventListener('click', () => {
 
 document.querySelector('#traffic-range').addEventListener('change', (event) => {
   const range = event.target.value;
+  selectedTrafficRange = range;
   renderTrafficChart(range);
   const labels = range === '24h'
     ? ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00']
@@ -253,7 +264,6 @@ document.querySelector('#traffic-range').addEventListener('change', (event) => {
       ? ['04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00']
       : ['09:00', '09:10', '09:20', '09:30', '09:40', '09:50', '10:00'];
   document.querySelector('.chart-axis').innerHTML = labels.map((label) => `<span>${label}</span>`).join('');
-  document.querySelector('.chart-error').innerHTML = `<i></i> ${range === '24h' ? '0.08%' : range === '6h' ? '0.07%' : '0.06%'} error rate`;
 });
 
 document.querySelector('#reset-breaker').addEventListener('click', () => {
@@ -313,6 +323,6 @@ document.querySelectorAll('.nav-link').forEach((link) => {
 window.setInterval(() => {
   const requests = 24891 + Math.floor(Math.random() * 24);
   document.querySelector('#requests-value').textContent = number(requests);
-  document.querySelector('#chart-total').textContent = number(requests);
+  if (selectedTrafficRange === '1h') document.querySelector('#chart-total').textContent = number(requests);
   document.querySelector('#last-refreshed').textContent = 'just now';
 }, 5000);
