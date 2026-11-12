@@ -483,6 +483,10 @@ button:disabled { cursor: default; }
 .dialog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .dialog-heading h2 { font: 600 19px var(--display); }
 .dialog-service-id { margin-top: 6px; color: #a1adbf; font: 11px var(--mono); }
+.dialog-id-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.dialog-id-row .dialog-service-id { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.copy-id-button { flex: 0 0 auto; padding: 5px 8px; border: 1px solid #35465a; border-radius: 5px; color: #bdc9d8; background: #1a2635; font-size: 10px; cursor: pointer; }
+.copy-id-button:hover { border-color: #547168; color: var(--teal); }
 .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 22px 0 0; }
 .detail-grid div { padding: 12px; border: 1px solid #2b394b; border-radius: 8px; background: #101925; }
 .detail-grid dt { color: #9aa8ba; font-size: 10px; }

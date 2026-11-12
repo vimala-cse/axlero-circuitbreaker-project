@@ -21,6 +21,7 @@ const toastViewport = document.querySelector('#toast-viewport');
 let toastTimer;
 let serviceSort = { field: null, direction: 1 };
 let lastRefreshedAt = Date.now();
+let selectedServiceId = '';
 
 function updateRefreshAge() {
   const elapsedSeconds = Math.floor((Date.now() - lastRefreshedAt) / 1000);
@@ -210,6 +211,7 @@ serviceRows.addEventListener('click', (event) => {
   if (!button) return;
   const service = services.find((item) => item.id === button.dataset.serviceDetails);
   if (!service) return;
+  selectedServiceId = service.detail;
   document.querySelector('#service-details-title').textContent = service.name;
   document.querySelector('#service-details-id').textContent = service.detail;
   document.querySelector('#service-details-status').textContent = `${service.status[0].toUpperCase()}${service.status.slice(1)} · ${service.breaker}`;
@@ -219,6 +221,21 @@ serviceRows.addEventListener('click', (event) => {
   serviceDetailsDialog.showModal();
 });
 serviceDetailsDialog.querySelector('[data-close-dialog]').addEventListener('click', () => serviceDetailsDialog.close());
+document.querySelector('#copy-service-id').addEventListener('click', async () => {
+  try {
+    if (!navigator.clipboard) throw new Error('Clipboard is unavailable');
+    await navigator.clipboard.writeText(selectedServiceId);
+    showToast('Service ID copied');
+  } catch {
+    const idText = document.querySelector('#service-details-id');
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(idText);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    showToast('Service ID selected · press Ctrl+C to copy');
+  }
+});
 
 const notificationsDialog = document.querySelector('#notifications-dialog');
 document.querySelector('#notifications-button').addEventListener('click', () => {
