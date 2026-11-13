@@ -23,6 +23,44 @@ let serviceSort = { field: null, direction: 1 };
 let lastRefreshedAt = Date.now();
 let selectedServiceId = '';
 
+function saveDashboardPreferences() {
+  try {
+    localStorage.setItem('circuitbreaker-dashboard-preferences', JSON.stringify({
+      serviceSearch: document.querySelector('#service-search').value,
+      serviceFilter: document.querySelector('#service-filter').value,
+      eventFilter: document.querySelector('#event-filter').value,
+      sortField: serviceSort.field,
+      sortDirection: serviceSort.direction,
+    }));
+  } catch {
+    // The dashboard remains usable when browser storage is unavailable.
+  }
+}
+
+function restoreDashboardPreferences() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('circuitbreaker-dashboard-preferences') || '{}');
+    const serviceFilters = ['all', 'healthy', 'degraded', 'open', 'half-open'];
+    const eventFilters = ['all', 'warning', 'success', 'info'];
+    if (typeof saved.serviceSearch === 'string') document.querySelector('#service-search').value = saved.serviceSearch;
+    if (serviceFilters.includes(saved.serviceFilter)) document.querySelector('#service-filter').value = saved.serviceFilter;
+    if (eventFilters.includes(saved.eventFilter)) document.querySelector('#event-filter').value = saved.eventFilter;
+    if (['name', 'latency', 'requests'].includes(saved.sortField)) {
+      serviceSort = { field: saved.sortField, direction: saved.sortDirection === -1 ? -1 : 1 };
+    }
+  } catch {
+    // Invalid or unavailable preferences fall back to the default dashboard view.
+  }
+}
+
+function syncSortButtons() {
+  document.querySelectorAll('[data-sort]').forEach((button) => {
+    const active = button.dataset.sort === serviceSort.field;
+    button.closest('th').setAttribute('aria-sort', active ? (serviceSort.direction === 1 ? 'ascending' : 'descending') : 'none');
+    button.querySelector('span').textContent = active ? (serviceSort.direction === 1 ? '↑' : '↓') : '↕';
+  });
+}
+
 function updateRefreshAge() {
   const elapsedSeconds = Math.floor((Date.now() - lastRefreshedAt) / 1000);
   const label = elapsedSeconds < 60 ? 'just now' : `${Math.floor(elapsedSeconds / 60)}m ago`;
@@ -173,22 +211,35 @@ function renderNotifications() {
   document.querySelector('#notification-list').innerHTML = events.map((event) => `<div class="notification-item"><span class="event-icon ${event.tone}">${event.icon}</span><div class="event-copy"><strong>${event.title}</strong> · ${event.target}<span>${event.detail}</span></div><time class="event-time">${event.time}</time></div>`).join('');
 }
 
+restoreDashboardPreferences();
+syncSortButtons();
 renderServices();
 renderTrafficChart();
 renderEvents();
 
-document.querySelector('#event-filter').addEventListener('change', renderEvents);
+document.querySelector('#event-filter').addEventListener('change', () => {
+  renderEvents();
+  saveDashboardPreferences();
+});
 document.querySelector('#reset-event-filter').addEventListener('click', () => {
   document.querySelector('#event-filter').value = 'all';
   renderEvents();
+  saveDashboardPreferences();
 });
 
-document.querySelector('#service-search').addEventListener('input', renderServices);
-document.querySelector('#service-filter').addEventListener('change', renderServices);
+document.querySelector('#service-search').addEventListener('input', () => {
+  renderServices();
+  saveDashboardPreferences();
+});
+document.querySelector('#service-filter').addEventListener('change', () => {
+  renderServices();
+  saveDashboardPreferences();
+});
 document.querySelector('#clear-service-filters').addEventListener('click', () => {
   document.querySelector('#service-search').value = '';
   document.querySelector('#service-filter').value = 'all';
   renderServices();
+  saveDashboardPreferences();
   document.querySelector('#service-search').focus();
 });
 
@@ -196,12 +247,9 @@ document.querySelectorAll('[data-sort]').forEach((button) => {
   button.addEventListener('click', () => {
     const field = button.dataset.sort;
     serviceSort = { field, direction: serviceSort.field === field ? -serviceSort.direction : 1 };
-    document.querySelectorAll('[data-sort]').forEach((item) => {
-      const active = item === button;
-      item.closest('th').setAttribute('aria-sort', active ? (serviceSort.direction === 1 ? 'ascending' : 'descending') : 'none');
-      item.querySelector('span').textContent = active ? (serviceSort.direction === 1 ? '↑' : '↓') : '↕';
-    });
+    syncSortButtons();
     renderServices();
+    saveDashboardPreferences();
   });
 });
 
