@@ -393,8 +393,12 @@ document.querySelectorAll('[data-scroll]').forEach((button) => {
 
 document.querySelectorAll('.nav-link').forEach((link) => {
   link.addEventListener('click', () => {
-    document.querySelectorAll('.nav-link').forEach((item) => item.classList.remove('active'));
+    document.querySelectorAll('.nav-link').forEach((item) => {
+      item.classList.remove('active');
+      item.removeAttribute('aria-current');
+    });
     link.classList.add('active');
+    link.setAttribute('aria-current', 'page');
   });
 });
 
