@@ -13,7 +13,7 @@
     <artifactId>recommendation-service</artifactId>
     <packaging>jar</packaging>
     <name>recommendation-service</name>
-    <description>Serves "you might also like" recommendations. This is the service we will deliberately make slow/unreliable from Week 2 onward, to prove the Gateway's Circuit Breaker protects the rest of the site.</description>
+    <description>Serves "you might also like" recommendations. This is the service we deliberately make slow or failing with the chaos switch to demo the circuit breaker.</description>
 
     <dependencies>
         <dependency>
@@ -27,6 +27,15 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- Week 4: tracing. Versions are managed by Spring Boot. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-brave</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.zipkin.reporter2</groupId>
+            <artifactId>zipkin-reporter-brave</artifactId>
         </dependency>
     </dependencies>
 
