@@ -31,5 +31,6 @@ export const testTimeLimiter = (seconds = 4) => request(`/api/recommendations/ti
 export const testLatency = (seconds = 3) => request(`/api/recommendations/delay?seconds=${seconds}`)
 export const getServiceHealth = (service) => request(`/health/${service}`)
 export const getCircuitBreakerState = () => request('/monitor/circuit-breaker')
+export const getMonitoringOverview = () => request('/monitor/overview')
 
 export const ZIPKIN_URL = 'http://localhost:9411/zipkin/'

@@ -26,6 +26,7 @@ import {
   getCircuitBreakerState
 } from './services/api'
 
+import MonitoringPanel from './components/MonitoringPanel'
 import laptopImage from './assets/laptop.jpg'
 import smartphoneImage from './assets/smartphone.jpg'
 import headphonesImage from './assets/headphones.jpg'
@@ -662,6 +663,9 @@ function Dashboard({
           color="blue"
         />
       </section>
+
+           {/* New live monitoring section */}
+      <MonitoringPanel />
 
       <div className="section-heading">
         <div>
