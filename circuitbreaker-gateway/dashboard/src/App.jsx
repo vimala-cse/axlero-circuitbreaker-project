@@ -108,6 +108,7 @@ export default function App() {
   const [counts, setCounts] = useState({ live: 0, fallback: 0, blocked: 0, error: 0 })
   const [rateTest, setRateTest] = useState(null)
   const [bulkTest, setBulkTest] = useState(null)
+  const [protection, setProtection] = useState(null)
 
   const seq = useRef(0)
   const haveCatalog = useRef(false)
@@ -158,10 +159,11 @@ export default function App() {
   useEffect(() => {
     let stop = false
     const tick = async () => {
-      const [hs, br, cz] = await Promise.all([
+      const [hs, br, cz, pr] = await Promise.all([
         Promise.all(SERVICES.map((s) => timedFetch(s.url, {}, 3000))),
         timedFetch('/gateway/breakers', {}, 3000),
         timedFetch('/chaos', {}, 3000),
+        timedFetch('/gateway/protection', {}, 3000),
       ])
       if (stop) return
       const h = {}
@@ -171,6 +173,7 @@ export default function App() {
       })
       setHealth(h)
       setBreakers(br.ok && Array.isArray(br.data) ? br.data : null)
+      setProtection(pr.ok && pr.data && typeof pr.data === 'object' ? pr.data : null)
       if (cz.ok && cz.data && cz.data.mode) setChaos(cz.data.mode)
       if (!haveCatalog.current && h.gateway.up) loadCatalog()
     }
@@ -229,6 +232,8 @@ export default function App() {
   // ---- derived state -------------------------------------------
   const recDown = health.recommendation && !health.recommendation.up
   const recentFallbacks = log.slice(0, 3).length === 3 && log.slice(0, 3).every((e) => e.kind === 'fallback')
+  const rl = protection && protection.rateLimiter
+  const bh = protection && protection.bulkhead
   const realBreaker = breakers && (breakers.find((b) => /recommend/i.test(b.name)) || breakers[0])
   let breakerState = 'CLOSED'
   let estimated = false
@@ -363,6 +368,7 @@ export default function App() {
               <Card className="tile">
                 <h3>Rate limiter</h3>
                 <p className="note">Stops one visitor from flooding the gateway.</p>
+                {rl && <p className="meta">Limit <b>{rl.limitPerSecond}</b> per second per visitor · <b>{rl.rejected}</b> blocked so far</p>}
                 {rateTest ? (
                     <div className="result">
                       <div className="meter"><i className="ok" style={{ width: (rateTest.ok / rateTest.sent) * 100 + '%' }} /><i className="no" style={{ width: (rateTest.blocked / rateTest.sent) * 100 + '%' }} /></div>
@@ -376,6 +382,7 @@ export default function App() {
               <Card className="tile">
                 <h3>Bulkhead</h3>
                 <p className="note">Limits how many calls one route can hold at once.</p>
+                {bh && <p className="meta">Max <b>{bh.maxConcurrent}</b> at once · <b>{bh.inUse}</b> in use now · <b>{bh.rejected}</b> rejected so far</p>}
                 {bulkTest ? (
                     <div className="result">
                       <div className="meter"><i className="ok" style={{ width: (bulkTest.live / bulkTest.sent) * 100 + '%' }} /><i className="mid" style={{ width: (bulkTest.fallback / bulkTest.sent) * 100 + '%' }} /><i className="no" style={{ width: (bulkTest.blocked / bulkTest.sent) * 100 + '%' }} /></div>
