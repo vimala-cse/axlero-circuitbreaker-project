@@ -606,7 +606,9 @@ function Dashboard({
   onCircuit
 }) {
   const services = Object.values(health)
-  const online = services.filter(value => value === 'UP').length
+const online = services.filter(
+  value => value === 'UP' || value === 'DEGRADED'
+).length
 
   return (
     <>
@@ -664,7 +666,7 @@ function Dashboard({
         />
       </section>
 
-           {/* New live monitoring section */}
+     {/* New live monitoring section */}
       <MonitoringPanel />
 
       <div className="section-heading">
@@ -737,7 +739,13 @@ function HealthCard({ name, status }) {
       <div className="health-card-top">
         <Server size={20} />
 
-        <span className={`status-pill ${status === 'UP' ? 'up' : 'down'}`}>
+        <span className={`status-pill ${
+  status === 'UP'
+    ? 'up'
+    : status === 'DEGRADED'
+      ? 'warning'
+      : 'down'
+}`}>
           {status}
         </span>
       </div>
@@ -930,6 +938,16 @@ function Health({ health, onRefresh }) {
 
         <p>
           <strong>DOWN:</strong> The health endpoint could not be reached or reported an issue.
+        </p>
+
+        <p>
+          <strong>DEGRADED:</strong> Some registered service instances are healthy,
+            but at least one instance is unavailable.
+        </p>
+
+        <p>
+          <strong>NOT_REGISTERED:</strong> No service instances are currently
+            registered in Eureka.
         </p>
       </div>
     </>

@@ -109,7 +109,7 @@ export default function MonitoringPanel() {
   )
 
   const onlineCount = Object.values(health)
-    .filter(status => status === 'UP').length
+  .filter(status => status === 'UP' || status === 'DEGRADED').length
 
   return (
     <section className="monitoring-panel">

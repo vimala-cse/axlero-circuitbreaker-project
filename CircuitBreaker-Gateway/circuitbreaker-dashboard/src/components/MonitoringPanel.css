@@ -149,7 +149,8 @@
 
 .monitor-breaker-state.half_open,
 .monitor-health-status.checking,
-.monitor-health-status.unknown {
+.monitor-health-status.unknown 
+.monitor-health-status.degraded {
   background: #fff1d9;
   color: #b36b0c;
 }
