@@ -109,9 +109,12 @@ export default function App() {
   const [rateTest, setRateTest] = useState(null)
   const [bulkTest, setBulkTest] = useState(null)
   const [protection, setProtection] = useState(null)
+  const [events, setEvents] = useState([])
 
   const seq = useRef(0)
   const haveCatalog = useRef(false)
+  const evSeq = useRef(0)
+  const prevBreaker = useRef(null)
 
   // ---- theme ---------------------------------------------------
   useEffect(() => {
@@ -130,6 +133,12 @@ export default function App() {
     setLog((l) => [row, ...l].slice(0, 40))
     setCounts((c) => ({ ...c, [kind]: c[kind] + 1 }))
     return kind
+  }, [])
+
+  // Short story of what happened: breaker changes and chaos switches.
+  const addEvent = useCallback((kind, label, text) => {
+    evSeq.current += 1
+    setEvents((e) => [{ key: evSeq.current, time: clock(), kind, label, text }, ...e].slice(0, 20))
   }, [])
 
   const fetchRec = useCallback(async (id) => {
@@ -203,7 +212,12 @@ export default function App() {
 
   const setMode = async (mode) => {
     const r = await timedFetch('/chaos?mode=' + mode + '&delayMs=4000', { method: 'POST' }, 4000)
-    if (r.ok) setChaos((r.data && r.data.mode) || mode)
+    if (r.ok) {
+      const m = (r.data && r.data.mode) || mode
+      setChaos(m)
+      addEvent('blocked', 'Chaos', 'Recommendation set to ' + (m === 'slow' ? 'Slow (4 s)' : m === 'fail' ? 'Fail (500)' : 'Normal'))
+    }
+    return r
   }
   const triggerLatency = async () => { setBusy('latency'); await setMode('slow'); await burst(8); setBusy('') }
   const sendBurst = async () => { setBusy('burst'); await burst(12); setBusy('') }
@@ -217,9 +231,15 @@ export default function App() {
   }
   const runBulkTest = async () => {
     setBusy('bulk')
+    // Fast answers never overlap, so the test needs Recommendation to be slow.
+    // We switch it to Slow for a moment and put it back afterwards.
+    const before = chaos
+    const wasOpen = breakerState === 'OPEN'
+    if (before !== 'slow') await setMode('slow')
     const rs = await burst(15)
+    if (before !== 'slow') await setMode(before)
     const k = (name) => rs.filter((x) => x.kind === name).length
-    setBulkTest({ sent: rs.length, live: k('live'), fallback: k('fallback'), blocked: k('blocked'), error: k('error') })
+    setBulkTest({ wasOpen, sent: rs.length, live: k('live'), fallback: k('fallback'), blocked: k('blocked'), error: k('error') })
     setBusy('')
   }
 
@@ -244,6 +264,16 @@ export default function App() {
     estimated = true
     if (recentFallbacks) breakerState = 'OPEN'
   }
+
+  useEffect(() => {
+    if (estimated) return
+    const prev = prevBreaker.current
+    prevBreaker.current = breakerState
+    if (prev === null || prev === breakerState) return
+    if (breakerState === 'OPEN') addEvent('error', 'Open', 'Breaker opened. Recommendation calls stopped, backup answers used.')
+    else if (breakerState === 'HALF_OPEN') addEvent('fallback', 'Half-open', 'Breaker is testing recovery with a few trial requests.')
+    else if (breakerState === 'CLOSED') addEvent('live', 'Closed', 'Breaker closed. Recommendation is answering again.')
+  }, [breakerState, estimated, addEvent])
 
   let headline = 'All services healthy'
   let sub = 'Every request goes through the gateway, and recommendations are coming live.'
@@ -373,7 +403,7 @@ export default function App() {
                     <div className="result">
                       <div className="meter"><i className="ok" style={{ width: (rateTest.ok / rateTest.sent) * 100 + '%' }} /><i className="no" style={{ width: (rateTest.blocked / rateTest.sent) * 100 + '%' }} /></div>
                       <p className="meta"><b>{rateTest.ok}</b> allowed · <b>{rateTest.blocked}</b> blocked (429)</p>
-                      {rateTest.blocked === 0 && <p className="meta faint">Nothing blocked, so it is not switched on yet.</p>}
+                      {rateTest.blocked === 0 && <p className="meta faint">Nothing blocked: the requests stayed under the limit.</p>}
                     </div>
                 ) : <p className="meta faint">Not tested yet.</p>}
                 <button className="btn small" disabled={!!busy} onClick={runRateTest}>{busy === 'rate' ? 'Sending…' : 'Test with 30 fast requests'}</button>
@@ -381,13 +411,13 @@ export default function App() {
 
               <Card className="tile">
                 <h3>Bulkhead</h3>
-                <p className="note">Limits how many calls one route can hold at once.</p>
+                <p className="note">Limits how many calls one route can hold at once. The test switches Recommendation to Slow for a moment.</p>
                 {bh && <p className="meta">Max <b>{bh.maxConcurrent}</b> at once · <b>{bh.inUse}</b> in use now · <b>{bh.rejected}</b> rejected so far</p>}
                 {bulkTest ? (
                     <div className="result">
                       <div className="meter"><i className="ok" style={{ width: (bulkTest.live / bulkTest.sent) * 100 + '%' }} /><i className="mid" style={{ width: (bulkTest.fallback / bulkTest.sent) * 100 + '%' }} /><i className="no" style={{ width: (bulkTest.blocked / bulkTest.sent) * 100 + '%' }} /></div>
                       <p className="meta"><b>{bulkTest.live}</b> live · <b>{bulkTest.fallback}</b> backup · <b>{bulkTest.blocked}</b> rejected</p>
-                      {bulkTest.blocked === 0 && <p className="meta faint">Nothing rejected, so the limit is not active yet.</p>}
+                      {bulkTest.blocked === 0 && <p className="meta faint">{bulkTest.wasOpen ? 'The breaker was open, so answers were instant and never overlapped. Press Back to normal, wait 10 s, then test again.' : 'Nothing rejected: every answer came back too fast to overlap. Try again.'}</p>}
                     </div>
                 ) : <p className="meta faint">Not tested yet.</p>}
                 <button className="btn small" disabled={!!busy} onClick={runBulkTest}>{busy === 'bulk' ? 'Sending…' : 'Test with 15 at once'}</button>
@@ -443,6 +473,21 @@ export default function App() {
               )}
             </Card>
           </div>
+
+          {/* 3b. What happened, in order */}
+          <Card title="What happened" hint="Breaker changes and chaos switches, newest first.">
+            {events.length === 0 ? <p className="empty">Nothing yet. Press Trigger latency and watch the breaker react.</p> : (
+                <ul className="log">
+                  {events.map((e) => (
+                      <li key={e.key} style={{ gridTemplateColumns: '78px 96px 1fr' }}>
+                        <span className="t">{e.time}</span>
+                        <Pill kind={e.kind}>{e.label}</Pill>
+                        <span>{e.text}</span>
+                      </li>
+                  ))}
+                </ul>
+            )}
+          </Card>
 
           {/* 4. What the shopper sees */}
           <Card title="What the shopper sees" hint="Pick a product to load its recommendations.">
