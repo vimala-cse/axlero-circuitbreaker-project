@@ -1,10 +1,14 @@
 package com.circuitbreaker.gateway;
 
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.core.ParameterizedTypeReference;
@@ -15,12 +19,17 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @RestController
 public class ServiceHealthController {
 
+    private static final Logger log =
+        LoggerFactory.getLogger(ServiceHealthController.class);
+
     private final DiscoveryClient discoveryClient;
     private final WebClient webClient;
+    private final Duration healthCheckTimeout;
 
     private static final Map<String, String> SERVICE_IDS = Map.of(
         "product", "product-service",
@@ -28,9 +37,14 @@ public class ServiceHealthController {
         "recommendation", "recommendation-service"
     );
 
-    public ServiceHealthController(DiscoveryClient discoveryClient) {
+    public ServiceHealthController(
+            DiscoveryClient discoveryClient,
+            @Value("${app.health-check.timeout:2s}")
+            Duration healthCheckTimeout) {
+
         this.discoveryClient = discoveryClient;
         this.webClient = WebClient.builder().build();
+        this.healthCheckTimeout = healthCheckTimeout;
     }
 
     @GetMapping("/health/{service}")
@@ -39,7 +53,6 @@ public class ServiceHealthController {
 
         String serviceKey = service.toLowerCase(Locale.ROOT);
 
-        // Gateway is responding because this endpoint is running.
         if ("gateway".equals(serviceKey)) {
             return Mono.just(Map.of(
                 "service", "gateway",
@@ -54,42 +67,49 @@ public class ServiceHealthController {
 
         if (serviceId == null) {
             return Mono.just(Map.of(
-                "service", service,
+                "service", serviceKey,
                 "status", "UNKNOWN",
                 "message", "Unknown service name"
             ));
         }
 
-        List<ServiceInstance> instances;
+        return Mono.fromCallable(
+                () -> discoveryClient.getInstances(serviceId))
+            .subscribeOn(Schedulers.boundedElastic())
+            .flatMap(instances -> {
 
-        try {
-            instances = discoveryClient.getInstances(serviceId);
-        } catch (Exception exception) {
-            return Mono.just(Map.of(
-                "service", serviceKey,
-                "status", "UNKNOWN",
-                "message", "Unable to contact Eureka service registry"
-            ));
-        }
+                if (instances == null || instances.isEmpty()) {
+                    log.warn("No instances registered for {}", serviceId);
 
-        if (instances == null || instances.isEmpty()) {
-            return Mono.just(Map.of(
-                "service", serviceKey,
-                "status", "NOT_REGISTERED",
-                "instanceCount", 0,
-                "healthyInstances", 0,
-                "instances", List.of(),
-                "message", "No instances registered in Eureka"
-            ));
-        }
+                    return Mono.just(Map.of(
+                        "service", serviceKey,
+                        "status", "NOT_REGISTERED",
+                        "instanceCount", 0,
+                        "healthyInstances", 0,
+                        "instances", List.of(),
+                        "message", "No instances registered in Eureka"
+                    ));
+                }
 
-        return Flux.fromIterable(instances)
-            .flatMap(this::checkInstance)
-            .collectList()
-            .map(this::buildServiceHealthResponse)
-            .map(result -> {
-                result.put("service", serviceKey);
-                return result;
+                return Flux.fromIterable(instances)
+                    .flatMap(this::checkInstance)
+                    .collectList()
+                    .map(results -> buildResponse(
+                        serviceKey, results));
+            })
+            .onErrorResume(error -> {
+                log.error(
+                    "Unable to discover service instances for {}",
+                    serviceId,
+                    error
+                );
+
+                return Mono.just(Map.of(
+                    "service", serviceKey,
+                    "status", "UNKNOWN",
+                    "message",
+                    "Unable to communicate with service registry"
+                ));
             });
     }
 
@@ -102,25 +122,43 @@ public class ServiceHealthController {
             .bodyToMono(
                 new ParameterizedTypeReference<Map<String, Object>>() {}
             )
+            .timeout(healthCheckTimeout)
             .map(body -> {
+
                 String status = String.valueOf(
                     body.getOrDefault("status", "UNKNOWN")
                 ).toUpperCase(Locale.ROOT);
 
-                return createInstanceResult(instance, status, body);
+                return createInstanceResult(
+                    instance, status, body);
             })
-            .defaultIfEmpty(createInstanceResult(
-                instance,
-                "UNKNOWN",
-                Map.of("message", "Empty health response")
-            ))
-            .onErrorResume(error -> Mono.just(
+            .defaultIfEmpty(
                 createInstanceResult(
                     instance,
-                    "DOWN",
-                    Map.of("message", "Health endpoint unavailable")
+                    "UNKNOWN",
+                    Map.of("message", "Empty health response")
                 )
-            ));
+            )
+            .onErrorResume(error -> {
+
+                log.warn(
+                    "Health check failed for {}:{} - {}",
+                    instance.getHost(),
+                    instance.getPort(),
+                    error.toString()
+                );
+
+                return Mono.just(
+                    createInstanceResult(
+                        instance,
+                        "DOWN",
+                        Map.of(
+                            "message",
+                            "Health endpoint unavailable or timed out"
+                        )
+                    )
+                );
+            });
     }
 
     private Map<String, Object> createInstanceResult(
@@ -147,16 +185,18 @@ public class ServiceHealthController {
         return result;
     }
 
-    private Map<String, Object> buildServiceHealthResponse(
-            List<Map<String, Object>> instanceResults) {
+    private Map<String, Object> buildResponse(
+            String service,
+            List<Map<String, Object>> instances) {
 
-        long healthyInstances = instanceResults.stream()
-            .filter(instance -> "UP".equals(instance.get("status")))
+        long healthyInstances = instances.stream()
+            .filter(instance ->
+                "UP".equals(instance.get("status")))
             .count();
 
         String overallStatus;
 
-        if (healthyInstances == instanceResults.size()) {
+        if (healthyInstances == instances.size()) {
             overallStatus = "UP";
         } else if (healthyInstances > 0) {
             overallStatus = "DEGRADED";
@@ -166,10 +206,11 @@ public class ServiceHealthController {
 
         Map<String, Object> response = new LinkedHashMap<>();
 
+        response.put("service", service);
         response.put("status", overallStatus);
-        response.put("instanceCount", instanceResults.size());
+        response.put("instanceCount", instances.size());
         response.put("healthyInstances", healthyInstances);
-        response.put("instances", instanceResults);
+        response.put("instances", instances);
 
         return response;
     }
