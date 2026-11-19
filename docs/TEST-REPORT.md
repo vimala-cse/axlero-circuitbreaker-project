@@ -30,7 +30,7 @@ Status values: **Pass**, **Fail**, **Pending**.
 
 | ID | Test | Steps | Expected | Actual | Status |
 |---|---|---|---|---|---|
-| T1 | Services register in Eureka | Open http://localhost:8761 | API-GATEWAY, PRODUCT-SERVICE, INVENTORY-SERVICE, RECOMMENDATION-SERVICE all show UP | | Pending |
+| T1 | Services register in Eureka | Open http://localhost:8761 | API-GATEWAY, PRODUCT-SERVICE, INVENTORY-SERVICE, RECOMMENDATION-SERVICE all show UP | All four services listed as UP with their ports 8080, 8082, 8081, 8083 (observed 19-11-2026, screenshots/t1-eureka-registered.png) | Pass |
 | T2 | Gateway routes to every service | Open `/api/products`, `/api/inventory`, `/api/recommendations/P-101` on port 8080 | Each returns 200 with its own data | Dashboard shows products, stock and recommendations (observed 16-11-2026) | Pass |
 
 ### B. Circuit breaker and chaos (mid-project and final review)
@@ -39,9 +39,10 @@ Status values: **Pass**, **Fail**, **Pending**.
 |---|---|---|---|---|---|
 | T3 | Slow service opens the breaker | Click **Trigger latency**, wait about 10 s | Breaker shows Open, answers become Backup, page stays responsive | Breaker went Open, Recommendation lever dropped, backup answers shown (observed 16-11-2026) | Pass |
 | T4 | Failing service opens the breaker | Choose **Fail (500)**, send **12 at once** | Breaker opens, shoppers get Backup answers | | Pending |
-| T5 | Service stopped completely | Stop recommendation-service in IntelliJ, wait 30 s | Fallback answers, headline says Recommendation is down, product and inventory still work, nothing hangs | | Pending |
+| T5 | Service stopped completely | Stop recommendation-service in IntelliJ, wait 30 s | Fallback answers, Recommendation lever shows Down, product and inventory still work, nothing hangs | Recommendation lever went red (Down, No answer), breaker Open, backup answers came back in 4 to 9 ms, shopper page still showed products, stock and Top Sellers. While the service stayed down the breaker kept cycling Open, Half-open, Open about every 10 s, because its trial calls failed (observed 19-11-2026, screenshots/t5-service-down.png and t5-events-log.png) | Pass |
+| T5b | Recovery after the service is started again | Start recommendation-service again, wait about 20 s | Breaker goes back to Closed, headline says all services healthy, answers are Live | Dashboard returned to "All services healthy", breaker Closed (observed 19-11-2026, screenshots/t5-recovered.png) | Pass |
 | T6 | Recovery | Click **Back to normal**, wait 10 to 15 s | Breaker goes Half-open then Closed, answers are Live again | | Pending |
-| T7 | Rest of the shop stays fast while breaker is open | With breaker Open, open `/api/products` | Still answers in milliseconds | | Pending |
+| T7 | Rest of the shop stays fast while breaker is open | With breaker Open, open `/api/products` | Still answers in milliseconds | Products and stock were still shown while the breaker was Open and Half-open, product and inventory health checks stayed green (observed 19-11-2026) | Pass |
 
 ### C. Rate limiter and bulkhead (Week 3)
 
