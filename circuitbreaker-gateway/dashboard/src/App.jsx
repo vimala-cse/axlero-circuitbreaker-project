@@ -115,6 +115,7 @@ export default function App() {
   const haveCatalog = useRef(false)
   const evSeq = useRef(0)
   const prevBreaker = useRef(null)
+  const quiet = useRef(false) // true while a test runs: stops background polling so it cannot use up browser connections
 
   // ---- theme ---------------------------------------------------
   useEffect(() => {
@@ -141,8 +142,8 @@ export default function App() {
     setEvents((e) => [{ key: evSeq.current, time: clock(), kind, label, text }, ...e].slice(0, 20))
   }, [])
 
-  const fetchRec = useCallback(async (id) => {
-    const r = await timedFetch('/api/recommendations/' + id, {}, 9000)
+  const fetchRec = useCallback(async (id, timeoutMs = 9000) => {
+    const r = await timedFetch('/api/recommendations/' + id, {}, timeoutMs)
     const kind = record(id, r)
     return { r, kind }
   }, [record])
@@ -168,6 +169,7 @@ export default function App() {
   useEffect(() => {
     let stop = false
     const tick = async () => {
+      if (quiet.current) return
       const [hs, br, cz, pr] = await Promise.all([
         Promise.all(SERVICES.map((s) => timedFetch(s.url, {}, 3000))),
         timedFetch('/gateway/breakers', {}, 3000),
@@ -196,6 +198,7 @@ export default function App() {
   useEffect(() => {
     if (!auto || !gatewayUp) return undefined
     const t = setInterval(async () => {
+      if (quiet.current) return
       const { r, kind } = await fetchRec(selected)
       setRec({ id: selected, kind, ms: r.ms, ids: recsOf(r.data) })
     }, 2500)
@@ -208,7 +211,7 @@ export default function App() {
   }, [gatewayUp])
 
   // ---- actions -------------------------------------------------
-  const burst = (n, id = selected) => Promise.all(Array.from({ length: n }, () => fetchRec(id)))
+  const burst = (n, id = selected, timeoutMs = 9000) => Promise.all(Array.from({ length: n }, () => fetchRec(id, timeoutMs)))
 
   const setMode = async (mode) => {
     const r = await timedFetch('/chaos?mode=' + mode + '&delayMs=4000', { method: 'POST' }, 4000)
@@ -233,11 +236,20 @@ export default function App() {
     setBusy('bulk')
     // Fast answers never overlap, so the test needs Recommendation to be slow.
     // We switch it to Slow for a moment and put it back afterwards.
+    // A browser only keeps about 6 connections open to one address, so the
+    // background polling is paused while the 15 requests go out.
     const before = chaos
     const wasOpen = breakerState === 'OPEN'
-    if (before !== 'slow') await setMode('slow')
-    const rs = await burst(15)
-    if (before !== 'slow') await setMode(before)
+    let rs = []
+    quiet.current = true
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      if (before !== 'slow') await setMode('slow')
+      rs = await burst(15, selected, 20000)
+      if (before !== 'slow') await setMode(before)
+    } finally {
+      quiet.current = false
+    }
     const k = (name) => rs.filter((x) => x.kind === name).length
     setBulkTest({ wasOpen, sent: rs.length, live: k('live'), fallback: k('fallback'), blocked: k('blocked'), error: k('error') })
     setBusy('')
@@ -416,7 +428,7 @@ export default function App() {
                 {bulkTest ? (
                     <div className="result">
                       <div className="meter"><i className="ok" style={{ width: (bulkTest.live / bulkTest.sent) * 100 + '%' }} /><i className="mid" style={{ width: (bulkTest.fallback / bulkTest.sent) * 100 + '%' }} /><i className="no" style={{ width: (bulkTest.blocked / bulkTest.sent) * 100 + '%' }} /></div>
-                      <p className="meta"><b>{bulkTest.live}</b> live · <b>{bulkTest.fallback}</b> backup · <b>{bulkTest.blocked}</b> rejected</p>
+                      <p className="meta"><b>{bulkTest.live}</b> live · <b>{bulkTest.fallback}</b> backup · <b>{bulkTest.blocked}</b> rejected{bulkTest.error > 0 && <> · <b>{bulkTest.error}</b> failed</>}</p>
                       {bulkTest.blocked === 0 && <p className="meta faint">{bulkTest.wasOpen ? 'The breaker was open, so answers were instant and never overlapped. Press Back to normal, wait 10 s, then test again.' : 'Nothing rejected: every answer came back too fast to overlap. Try again.'}</p>}
                     </div>
                 ) : <p className="meta faint">Not tested yet.</p>}
