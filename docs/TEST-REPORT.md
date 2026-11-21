@@ -49,7 +49,7 @@ Status values: **Pass**, **Fail**, **Pending**.
 | ID | Test | Steps | Expected | Actual | Status |
 |---|---|---|---|---|---|
 | T8 | Rate limiter blocks floods | Click **Test with 30 fast requests** | About 20 allowed, the rest blocked with 429 | 20 allowed, 10 blocked (observed 16-11-2026) | Pass |
-| T9 | Bulkhead rejects extra concurrent calls | Click **Test with 15 at once** (switches to Slow for the test) | At most 5 admitted at once, the rest rejected with 503 | Earlier command-line test: 4 allowed, 11 rejected with 503 (observed 07-11-2026). Dashboard test: Pending | Pending |
+| T9 | Bulkhead rejects extra concurrent calls | Breaker Closed, Recommendation in Slow mode, then 15 requests at once from Git Bash (parallel curl) | At most 5 admitted at once, the rest rejected at once with 503 | 4 requests were admitted and answered after 3.0 s, 11 were rejected with 503 in under 0.1 s. `/gateway/protection` showed bulkhead rejected = 11, in use = 0 afterwards (observed 20-11-2026, output in the Evidence section) | Pass |
 | T10 | Dashboard shows real counters | Compare tiles with http://localhost:8080/gateway/protection | Numbers match | Rate limiter tile showed limit 20 and blocked count (observed 16-11-2026) | Pass |
 
 ### D. Tracing (Week 4)
@@ -73,6 +73,38 @@ Status values: **Pass**, **Fail**, **Pending**.
 |---|---|---|---|---|
 | D1 | Storefront showed no recommendations and no stock (service answers were a list and a map, dashboard expected objects) | 09-11-2026 | Dashboard now reads both formats | Fixed |
 | D2 | Bulkhead tile said "limit not active" when answers were just too fast to overlap | 16-11-2026 | Test now switches Recommendation to Slow, message explains the reason | Fixed |
+| D3 | Dashboard bulkhead test showed 0 rejected: the first command-line run also gave 15 x 200 because the breaker was not Closed, so every answer was an instant backup and requests never overlapped | 20-11-2026 | Bulkhead itself is fine. Dashboard test now pauses background polling and tells the tester when the breaker is not Closed | Fixed |
+
+## Evidence: bulkhead test from the command line (20-11-2026)
+
+Breaker state before the test: `CLOSED`, 10 calls in the window, 0 failed.
+
+```
+200 3.005207s
+200 3.012974s
+200 3.015850s
+200 3.016011s
+503 0.001912s
+503 0.002310s
+503 0.002468s
+503 0.002641s
+503 0.002754s
+503 0.002948s
+503 0.004074s
+503 0.019194s
+503 0.036506s
+503 0.043242s
+503 0.053278s
+```
+
+`GET /gateway/protection` afterwards:
+
+```
+{"rateLimiter":{"enabled":true,"limitPerSecond":20,"allowed":501,"rejected":0},
+ "bulkhead":{"enabled":true,"maxConcurrent":5,"inUse":0,"rejected":11}}
+```
+
+Four admitted calls instead of five: the dashboard's own background request was holding one slot.
 
 ## Summary
 
