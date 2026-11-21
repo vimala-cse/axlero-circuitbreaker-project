@@ -239,7 +239,7 @@ export default function App() {
     // A browser only keeps about 6 connections open to one address, so the
     // background polling is paused while the 15 requests go out.
     const before = chaos
-    const wasOpen = breakerState === 'OPEN'
+    const wasOpen = breakerState !== 'CLOSED'
     let rs = []
     quiet.current = true
     try {
@@ -429,7 +429,7 @@ export default function App() {
                     <div className="result">
                       <div className="meter"><i className="ok" style={{ width: (bulkTest.live / bulkTest.sent) * 100 + '%' }} /><i className="mid" style={{ width: (bulkTest.fallback / bulkTest.sent) * 100 + '%' }} /><i className="no" style={{ width: (bulkTest.blocked / bulkTest.sent) * 100 + '%' }} /></div>
                       <p className="meta"><b>{bulkTest.live}</b> live · <b>{bulkTest.fallback}</b> backup · <b>{bulkTest.blocked}</b> rejected{bulkTest.error > 0 && <> · <b>{bulkTest.error}</b> failed</>}</p>
-                      {bulkTest.blocked === 0 && <p className="meta faint">{bulkTest.wasOpen ? 'The breaker was open, so answers were instant and never overlapped. Press Back to normal, wait 10 s, then test again.' : 'Nothing rejected: every answer came back too fast to overlap. Try again.'}</p>}
+                      {bulkTest.blocked === 0 && <p className="meta faint">{bulkTest.wasOpen ? 'The breaker was not Closed, so answers were instant and never overlapped. Press Back to normal, wait until it shows Closed, then test again.' : 'Nothing rejected: every answer came back too fast to overlap. Try again.'}</p>}
                     </div>
                 ) : <p className="meta faint">Not tested yet.</p>}
                 <button className="btn small" disabled={!!busy} onClick={runBulkTest}>{busy === 'bulk' ? 'Sending…' : 'Test with 15 at once'}</button>
