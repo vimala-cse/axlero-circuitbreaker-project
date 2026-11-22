@@ -2,7 +2,7 @@
 
 Project 3, Axlero Solutions internship. Testers: Vimala, Samata Chougule.
 
-This file lists every test we run on the system, what we expect, and what we actually saw. Rows marked **Observed** were already checked on the date shown. The rest are **Pending** and are filled in as we test.
+This file lists every test we run on the system, what we expect, and what we actually saw. Each row shows the date it was observed and, where we have one, the screenshot in `docs/screenshots/`.
 
 ## How to run the system for testing
 
@@ -38,10 +38,10 @@ Status values: **Pass**, **Fail**, **Pending**.
 | ID | Test | Steps | Expected | Actual | Status |
 |---|---|---|---|---|---|
 | T3 | Slow service opens the breaker | Click **Trigger latency**, wait about 10 s | Breaker shows Open, answers become Backup, page stays responsive | Breaker went Open, Recommendation lever dropped, backup answers shown (observed 16-11-2026) | Pass |
-| T4 | Failing service opens the breaker | Choose **Fail (500)**, send **12 at once** | Breaker opens, shoppers get Backup answers | | Pending |
+| T4 | Failing service opens the breaker | Choose **Fail (500)**, send **12 at once** | Breaker opens, shoppers get Backup answers | Breaker went Open (failure rate 100%), the Recommendation lever turned red and every answer was Backup (3 to 15 ms). While Fail mode stayed on, the breaker kept cycling Open, Half-open, Open about every 10 s because its trial calls failed (observed 21-11-2026, screenshots/t4-breaker-open.png, t4-fail-mode-backup.png and t4-events-log.png) | Pass |
 | T5 | Service stopped completely | Stop recommendation-service in IntelliJ, wait 30 s | Fallback answers, Recommendation lever shows Down, product and inventory still work, nothing hangs | Recommendation lever went red (Down, No answer), breaker Open, backup answers came back in 4 to 9 ms, shopper page still showed products, stock and Top Sellers. While the service stayed down the breaker kept cycling Open, Half-open, Open about every 10 s, because its trial calls failed (observed 19-11-2026, screenshots/t5-service-down.png and t5-events-log.png) | Pass |
 | T5b | Recovery after the service is started again | Start recommendation-service again, wait about 20 s | Breaker goes back to Closed, headline says all services healthy, answers are Live | Dashboard returned to "All services healthy", breaker Closed (observed 19-11-2026, screenshots/t5-recovered.png) | Pass |
-| T6 | Recovery | Click **Back to normal**, wait 10 to 15 s | Breaker goes Half-open then Closed, answers are Live again | | Pending |
+| T6 | Recovery | Click **Back to normal**, wait 10 to 15 s | Breaker goes Half-open then Closed, answers are Live again | Log showed Chaos Normal 18:08:15, Open 18:08:16, Half-open 18:08:25, Closed 18:08:31, then answers were Live again (observed 21-11-2026, screenshots/t6-recovery-live.png) | Pass |
 | T7 | Rest of the shop stays fast while breaker is open | With breaker Open, open `/api/products` | Still answers in milliseconds | Products and stock were still shown while the breaker was Open and Half-open, product and inventory health checks stayed green (observed 19-11-2026) | Pass |
 
 ### C. Rate limiter and bulkhead (Week 3)
@@ -57,15 +57,15 @@ Status values: **Pass**, **Fail**, **Pending**.
 | ID | Test | Steps | Expected | Actual | Status |
 |---|---|---|---|---|---|
 | T11 | One trace across services | Send a request, open Zipkin, click **Run Query** | A trace with 3 spans: gateway then the backend service | 3-span traces for api-gateway requests (observed 16-11-2026) | Pass |
-| T12 | Trace id in logs | Look at IntelliJ console after a request | Log lines contain `[service-name, traceId, spanId]` | | Pending |
+| T12 | Trace id in logs | Look at IntelliJ console after a request | Log lines contain `[service-name, traceId, spanId]` | product-service printed `[product-service,6b01971a1081dc52465e8648f6e22420,fd7a71ab61b741de]` for `GET /api/products`. Lines outside a request (startup, Eureka) show empty ids, as expected. The gateway does not log each request, so the test used product-service with `logging.level.org.springframework.web.servlet.DispatcherServlet=DEBUG` (observed 21-11-2026) | Pass |
 
 ### E. Dashboard
 
 | ID | Test | Steps | Expected | Actual | Status |
 |---|---|---|---|---|---|
 | T13 | Light and dark theme | Click the theme button | Theme changes, text stays readable | Both themes checked (observed 16-11-2026) | Pass |
-| T14 | Mobile layout | Open on a narrow window or zoom to 300% | Tiles stack, nothing is cut off | | Pending |
-| T15 | Events log | Trigger latency, then Back to normal | "What happened" lists the mode change, Open, Half-open and Closed with times | | Pending |
+| T14 | Mobile layout | Open on a narrow window or zoom to 300% | Tiles stack, nothing is cut off | At 300% zoom the header, breaker panel tiles, protection cards, chaos controls, live requests and event log all stayed on screen, tiles stacked one under another, nothing was cut off (observed 21-11-2026, screenshots/t14-mobile-top.png) | Pass |
+| T15 | Events log | Trigger latency, then Back to normal | "What happened" lists the mode change, Open, Half-open and Closed with times | Log listed Chaos (Slow 4 s), Chaos (Normal), Open, Half-open and Closed, each with its time (observed 21-11-2026, screenshots/t15-events-log.png) | Pass |
 
 ## Defects found
 
@@ -73,7 +73,7 @@ Status values: **Pass**, **Fail**, **Pending**.
 |---|---|---|---|---|
 | D1 | Storefront showed no recommendations and no stock (service answers were a list and a map, dashboard expected objects) | 09-11-2026 | Dashboard now reads both formats | Fixed |
 | D2 | Bulkhead tile said "limit not active" when answers were just too fast to overlap | 16-11-2026 | Test now switches Recommendation to Slow, message explains the reason | Fixed |
-| D3 | Dashboard bulkhead test showed 0 rejected: the first command-line run also gave 15 x 200 because the breaker was not Closed, so every answer was an instant backup and requests never overlapped | 20-11-2026 | Bulkhead itself is fine. Dashboard test now pauses background polling and tells the tester when the breaker is not Closed | Fixed |
+| D3 | Dashboard bulkhead test showed 0 rejected: the first command-line run also gave 15 x 200 because the breaker was not Closed, so every answer was an instant backup and requests never overlapped | 20-11-2026 | Bulkhead itself is fine. Dashboard test now pauses background polling and tells the tester when the breaker is not Closed. A second dashboard run on 21-11-2026 still showed 15 backup, 0 rejected, because a browser sends only about 6 requests at the same time, so the button cannot reliably overload the bulkhead. The command-line test (T9) is the proof | Known limit |
 
 ## Evidence: bulkhead test from the command line (20-11-2026)
 
@@ -108,4 +108,6 @@ Four admitted calls instead of five: the dashboard's own background request was 
 
 ## Summary
 
-Filled in at the end: total tests, passed, failed, date, tester names.
+16 tests run (T1 to T15 and T5b): 16 passed, 0 failed, on 21-11-2026.
+
+Defects found: 3. D1 and D2 are fixed. D3 is a limit of the dashboard test button (a browser cannot send enough requests at once); the bulkhead itself passes through the command-line test T9.
