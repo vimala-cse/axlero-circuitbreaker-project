@@ -583,3 +583,70 @@ section[id] { scroll-margin-top: 78px; }
     transition-duration: .01ms !important;
   }
 }
+
+/* Finishing pass: stronger contrast and more intentional accents. */
+body {
+  background:
+    radial-gradient(ellipse at 74% -8%, #23655b38 0, transparent 34%),
+    radial-gradient(ellipse at 7% 32%, #34376920 0, transparent 36%),
+    linear-gradient(180deg, #0b111a 0%, var(--bg) 38rem);
+  background-attachment: fixed;
+}
+
+.page-heading {
+  position: relative;
+  padding-top: 39px;
+  padding-bottom: 28px;
+}
+.page-heading h1 { font-size: clamp(32px, 3.2vw, 42px); letter-spacing: -1.8px; }
+.page-subtitle { max-width: 540px; line-height: 1.65; }
+.heading-meta {
+  border-color: #344456;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #14221fdd, #131b27dd);
+  box-shadow: 0 8px 25px #02060b35, inset 0 1px #ffffff0b;
+}
+
+.metric-card {
+  --metric-accent: #79ead4;
+  border-radius: 12px;
+  border-color: #334256;
+  background: linear-gradient(145deg, #172333 0%, #111a26 78%);
+  box-shadow: 0 14px 34px #02060b38, inset 0 1px #ffffff0b;
+}
+.metric-card:nth-child(2) { --metric-accent: #c3aaff; }
+.metric-card:nth-child(3) { --metric-accent: #8becbf; }
+.metric-card:nth-child(4) { --metric-accent: #ffd08b; }
+.metric-card::before {
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--metric-accent) 72%, transparent), transparent);
+}
+.metric-value { font-variant-numeric: tabular-nums; }
+.metric-heading { letter-spacing: .1em; }
+
+.panel {
+  border-radius: 13px;
+  border-color: #303f53;
+  background: linear-gradient(145deg, #151f2c 0%, #101722 78%);
+  box-shadow: 0 14px 36px #02060b38, inset 0 1px #ffffff0a;
+}
+.traffic-panel { background: radial-gradient(ellipse at 92% 14%, #2478661a, transparent 42%), linear-gradient(145deg, #151f2c, #101722 78%); }
+.breaker-panel { background: radial-gradient(ellipse at 95% 5%, #7258321b, transparent 40%), linear-gradient(145deg, #151f2c, #101722 78%); }
+.panel-header { margin-bottom: 2px; }
+.panel-kicker { letter-spacing: .13em; }
+.panel h2 { letter-spacing: -.3px; }
+
+.services-header {
+  border-bottom: 1px solid #29384b;
+  margin: 0 -2px 13px;
+  padding: 0 2px 16px;
+}
+.service-count { color: #c0cedd; background: #1b2938; }
+.table-wrap th { background: #172332; }
+.service-health, .breaker-mini { font-variant-numeric: tabular-nums; }
+.event-icon { box-shadow: inset 0 1px #ffffff12; }
