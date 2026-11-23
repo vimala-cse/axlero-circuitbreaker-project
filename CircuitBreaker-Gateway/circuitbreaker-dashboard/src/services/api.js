@@ -22,6 +22,25 @@ async function request(url) {
 }
 
 export const getProducts = () => request('/api/products')
+export const createProduct = (product) => {
+  return fetch(`${API_BASE}/api/products`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(product)
+  }).then(async response => {
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || `Request failed: ${response.status}`
+      )
+    }
+
+    return data
+  })
+}
 export const getInventory = (productId) => request(`/api/inventory/${productId}`)
 export const getRecommendations = () => request('/api/recommendations')
 export const simulateRecommendationFailure = () => request('/api/recommendations/failure')

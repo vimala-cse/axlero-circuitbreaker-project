@@ -16,6 +16,7 @@ import {
 
 import {
   getProducts,
+  createProduct,
   getInventory,
   getRecommendations,
   getServiceHealth,
@@ -30,33 +31,67 @@ import MonitoringPanel from './components/MonitoringPanel'
 import laptopImage from './assets/laptop.jpg'
 import smartphoneImage from './assets/smartphone.jpg'
 import headphonesImage from './assets/headphones.jpg'
+import mouseImage from './assets/mouse.jpg'
+import keyboardImage from './assets/keyboard.jpg'
+import monitorImage from './assets/monitor.jpg'
+import smartwatchImage from './assets/smartwatch.jpg'
+import tabletImage from './assets/tablet.jpg'
+import speakerImage from './assets/speaker.jpg'
+import powerBankImage from './assets/powerbank.jpg'
 import ObservabilityCenter from './components/ObservabilityCenter'
 
 import './App.css'
 
-function getFallbackProductImage(product, index) {
+function getProductVisual(product) {
   const name = `${product.name || product.productName || ''}`.toLowerCase()
+  const category = `${product.category || ''}`.toLowerCase()
+  const productDetails = `${name} ${category}`
 
-  if (/laptop|notebook|computer|macbook/.test(name)) {
-    return laptopImage
+  if (/mouse|mice/.test(productDetails)) {
+    return { image: mouseImage }
   }
 
-  if (/headphone|earbud|audio|speaker/.test(name)) {
-    return headphonesImage
+  if (/keyboard/.test(productDetails)) {
+    return { image: keyboardImage }
   }
 
-  if (/phone|mobile|smartphone/.test(name)) {
-    return smartphoneImage
+  if (/monitor|display/.test(productDetails)) {
+    return { image: monitorImage }
   }
 
-  return [laptopImage, smartphoneImage, headphonesImage][index % 3]
-}
+  if (/smart[\s-]?watch|watch|wearable/.test(productDetails)) {
+    return { image: smartwatchImage }
+  }
 
-function getProductImage(product, index) {
+  if (/tablet|ipad/.test(productDetails)) {
+    return { image: tabletImage }
+  }
+
+  if (/speaker|soundbar/.test(productDetails)) {
+    return { image: speakerImage }
+  }
+
+  if (/power[\s-]?bank|portable charger|battery pack/.test(productDetails)) {
+    return { image: powerBankImage }
+  }
+
+  if (/headphone|earphone|earbud/.test(productDetails)) {
+    return { image: headphonesImage }
+  }
+
+  if (/\bphone\b|\bmobile\b|smartphone/.test(productDetails)) {
+    return { image: smartphoneImage }
+  }
+
+  if (/laptop|notebook|macbook/.test(productDetails)) {
+    return { image: laptopImage }
+  }
+
   const image = product.imageUrl || product.image || product.thumbnail
-  return typeof image === 'string' && image.trim()
-    ? image
-    : getFallbackProductImage(product, index)
+  return {
+    image: typeof image === 'string' && image.trim() ? image : null,
+    Icon: Package
+  }
 }
 
 const menuItems = [
@@ -120,6 +155,30 @@ function App() {
       setLoading(false)
     }
   }
+
+  async function handleAddProduct(product) {
+  setLoading(true)
+  setMessage('')
+
+  try {
+    await createProduct(product)
+
+    const productData = await getProducts()
+    setProducts(Array.isArray(productData) ? productData : [])
+
+    setMessage('Product added successfully!')
+    setMessageType('success')
+
+    return true  // Product added successfully
+  } catch (error) {
+    setMessage(error.message || 'Unable to add product')
+    setMessageType('error')
+
+    return false  // Product addition failed
+  } finally {
+    setLoading(false)
+  }
+}
 
   async function loadRecommendations() {
     try {
@@ -539,8 +598,12 @@ function App() {
         )}
 
         {page === 'products' && (
-          <Products products={products} />
-        )}
+  <Products
+    products={products}
+    onAddProduct={handleAddProduct}
+    loading={loading}
+  />
+)}
 
         {page === 'inventory' && (
           <Inventory
@@ -756,7 +819,60 @@ function HealthCard({ name, status }) {
   )
 }
 
-function Products({ products }) {
+
+function Products({ products, onAddProduct, loading }) {
+
+  const [showForm, setShowForm] = useState(false)
+
+  const [formData, setFormData] = useState({
+    name: '',
+    category: '',
+    price: '',
+    description: ''
+  })
+
+  function handleChange(event) {
+    const { name, value } = event.target
+
+    setFormData(previous => ({
+      ...previous,
+      [name]: value
+    }))
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+
+    if (
+      !formData.name.trim() ||
+      !formData.category.trim() ||
+      !formData.price ||
+      Number(formData.price) <= 0
+    ) {
+      return
+    }
+
+   const success = await onAddProduct({
+  name: formData.name.trim(),
+  category: formData.category.trim(),
+  price: Number(formData.price),
+  description: formData.description.trim()
+})
+
+if (!success) {
+  return
+}
+
+    setFormData({
+      name: '',
+      category: '',
+      price: '',
+      description: ''
+    })
+
+    setShowForm(false)
+  }
+
   return (
     <>
       <div className="section-heading">
@@ -764,7 +880,87 @@ function Products({ products }) {
           <h2>Available Products</h2>
           <p>Data loaded from Product Service through API Gateway</p>
         </div>
+
+        <button
+          className="primary-button"
+          onClick={() => setShowForm(!showForm)}
+        >
+          {showForm ? 'Cancel' : '+ Add Product'}
+        </button>
       </div>
+
+      {showForm && (
+        <form
+          className="product-form"
+          onSubmit={handleSubmit}
+        >
+          <h3>Add New Product</h3>
+
+          <div className="product-form-grid">
+
+            <div className="product-form-field">
+              <label>Product Name</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Enter product name"
+                required
+              />
+            </div>
+
+            <div className="product-form-field">
+              <label>Category</label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select category</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Accessories">Accessories</option>
+                <option value="Wearables">Wearables</option>
+              </select>
+            </div>
+
+            <div className="product-form-field">
+              <label>Price (₹)</label>
+              <input
+                type="number"
+                name="price"
+                value={formData.price}
+                onChange={handleChange}
+                placeholder="Enter price"
+                min="0.01"
+                step="0.01"
+                required
+              />
+            </div>
+
+            <div className="product-form-field">
+              <label>Description</label>
+              <input
+                type="text"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Enter product description"
+              />
+            </div>
+
+          </div>
+
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={loading}
+          >
+            {loading ? 'Adding Product...' : 'Save Product'}
+          </button>
+        </form>
+      )}
 
       {products.length === 0 ? (
         <div className="empty-state">
@@ -772,45 +968,69 @@ function Products({ products }) {
         </div>
       ) : (
         <div className="product-grid">
-          {products.map((product, index) => (
-            <article className="product-card" key={product.id ?? index}>
-              <div className="product-art">
-                <img
-                  src={getProductImage(product, index)}
-                  alt={product.name || product.productName || 'Product'}
-                  loading="lazy"
-                  onError={event => {
-                    event.currentTarget.onerror = null
-                    event.currentTarget.src = getFallbackProductImage(product, index)
-                  }}
-                />
-                <span className="product-image-label">IN CATALOG</span>
-              </div>
 
-              <div className="product-info">
-                <span className="eyebrow">
-                  PRODUCT #{product.id ?? index + 1}
-                </span>
+          {products.map((product, index) => {
+            const visual = getProductVisual(product)
+            const ProductIcon = visual.Icon || Package
 
-                <h3>
-                  {product.name || product.productName || 'Product'}
-                </h3>
+            return (
+              <article
+                className="product-card"
+                key={product.id ?? index}
+              >
+                <div className="product-art">
+                  <div className="product-art-placeholder" aria-hidden="true">
+                    <ProductIcon size={42} strokeWidth={1.5} />
+                  </div>
+                  {visual.image && (
+                    <img
+                      src={visual.image}
+                      alt={product.name || product.productName || 'Product'}
+                      loading="lazy"
+                      onError={event => event.currentTarget.remove()}
+                    />
+                  )}
 
-                <p>{product.description || 'E-commerce product'}</p>
+                  <span className="product-image-label">
+                    IN CATALOG
+                  </span>
+                </div>
 
-                <strong>
-                  {product.price != null
-                    ? `₹${product.price}`
-                    : 'Price not provided'}
-                </strong>
-              </div>
-            </article>
-          ))}
+                <div className="product-info">
+                  <span className="eyebrow">
+                    PRODUCT #{product.id ?? index + 1}
+                  </span>
+
+                  <h3>
+                    {product.name || product.productName || 'Product'}
+                  </h3>
+
+                  <p>
+                    {product.description || 'E-commerce product'}
+                  </p>
+
+                  <strong>
+                    {product.price != null
+                      ? `₹${product.price}`
+                      : 'Price not provided'}
+                  </strong>
+
+                  {product.category && (
+                    <p className="product-category">
+                      {product.category}
+                    </p>
+                  )}
+                </div>
+              </article>
+            )
+          })}
+
         </div>
       )}
     </>
   )
 }
+
 
 function Inventory({
   selectedProduct,

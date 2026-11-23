@@ -192,6 +192,7 @@ export default function MonitoringPanel() {
           </div>
 
           <div className="monitor-detail-row">
+            
             <span>Slow-call rate</span>
             <strong>{formatNumber(breaker?.slowCallRate, 1)}%</strong>
           </div>
