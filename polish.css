@@ -650,3 +650,31 @@ body {
 .table-wrap th { background: #172332; }
 .service-health, .breaker-mini { font-variant-numeric: tabular-nums; }
 .event-icon { box-shadow: inset 0 1px #ffffff12; }
+.export-short { display: none; }
+
+@media (max-width: 840px) {
+  .page-heading { padding-top: 31px; }
+  .heading-meta { align-self: flex-start; }
+  .metric-grid { gap: 10px; }
+}
+
+@media (max-width: 540px) {
+  .page-heading { padding-top: 25px; }
+  .page-heading h1 { font-size: clamp(28px, 8vw, 34px); letter-spacing: -1.2px; }
+  .heading-meta { border-radius: 9px; padding: 7px 9px; }
+  .metric-card { border-radius: 10px; }
+  .metric-card::before { left: 10px; right: 10px; }
+  .service-actions { grid-template-columns: minmax(0, 1fr) auto 36px; }
+  .service-actions .range-select { width: 100%; min-width: 0; max-width: none; padding-left: 6px; padding-right: 16px; }
+  .export-full { display: none; }
+  .export-short { display: inline; }
+  .service-actions .export-button { min-width: 54px; padding: 0 6px; }
+  .services-header { border-bottom-color: #29384b; }
+  .table-footer { flex-wrap: wrap; }
+  .detail-grid { gap: 7px; }
+  .detail-grid div { padding: 9px; }
+}
+
+@media (hover: none) {
+  .metric-card:hover { transform: none; }
+}
