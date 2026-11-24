@@ -1,6 +1,7 @@
-
 package com.circuitbreaker.recommendation;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -14,29 +15,39 @@ import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 @Service
 public class RecommendationResilienceService {
 
-    // NORMAL RECOMMENDATIONS
-    public List<Map<String, Object>> getRecommendations() {
+    private final ProductCatalogClient productCatalogClient;
 
-        return List.of(
-            Map.of(
-                "id", 2,
-                "name", "Mobile",
-                "reason", "Popular product"
-            ),
-            Map.of(
-                "id", 3,
-                "name", "Headphones",
-                "reason", "Frequently purchased"
-            ),
-            Map.of(
-                "id", 1,
-                "name", "Laptop",
-                "reason", "Trending product"
-            )
-        );
+    public RecommendationResilienceService(
+            ProductCatalogClient productCatalogClient) {
+        this.productCatalogClient = productCatalogClient;
     }
 
-    // WEEK 3: BULKHEAD
+    // NORMAL RECOMMENDATIONS - DYNAMIC PRODUCT CATALOGUE
+    public List<Map<String, Object>> getRecommendations() {
+
+        List<Map<String, Object>> products =
+                productCatalogClient.getProducts();
+
+        List<Map<String, Object>> recommendations = new ArrayList<>();
+
+        for (Map<String, Object> product : products) {
+
+            Map<String, Object> recommendation =
+                    new LinkedHashMap<>(product);
+
+            recommendation.put(
+                    "reason",
+                    "Recommended product from "
+                            + product.getOrDefault("category", "our catalogue")
+            );
+
+            recommendations.add(recommendation);
+        }
+
+        return recommendations;
+    }
+
+    // BULKHEAD
     @Bulkhead(
         name = "recommendationBulkhead",
         type = Type.SEMAPHORE,
@@ -55,8 +66,7 @@ public class RecommendationResilienceService {
             Thread.currentThread().interrupt();
 
             throw new RuntimeException(
-                "Bulkhead request interrupted", e
-            );
+                    "Bulkhead request interrupted", e);
         }
 
         return getRecommendations();
@@ -67,8 +77,7 @@ public class RecommendationResilienceService {
             int seconds, Throwable throwable) {
 
         System.out.println(
-            "Bulkhead activated: " + throwable.getMessage()
-        );
+                "Bulkhead activated: " + throwable.getMessage());
 
         return List.of(
             Map.of(
@@ -79,7 +88,7 @@ public class RecommendationResilienceService {
         );
     }
 
-    // WEEK 3: TIMELIMITER
+    // TIMELIMITER
     @TimeLimiter(
         name = "recommendationTimeLimiter",
         fallbackMethod = "timeLimiterFallback"
@@ -99,8 +108,7 @@ public class RecommendationResilienceService {
                 Thread.currentThread().interrupt();
 
                 throw new RuntimeException(
-                    "Recommendation request interrupted", e
-                );
+                        "Recommendation request interrupted", e);
             }
 
             return getRecommendations();
@@ -113,8 +121,7 @@ public class RecommendationResilienceService {
                     int seconds, Throwable throwable) {
 
         System.out.println(
-            "TimeLimiter activated: " + throwable.getMessage()
-        );
+                "TimeLimiter activated: " + throwable.getMessage());
 
         return CompletableFuture.completedFuture(
             List.of(
