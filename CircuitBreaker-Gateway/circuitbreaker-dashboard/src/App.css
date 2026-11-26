@@ -1484,3 +1484,38 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+
+
+.inventory-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.inventory-list-item:last-child {
+  border-bottom: none;
+}
+
+.inventory-list-item p {
+  margin: 6px 0 0;
+  color: var(--text-muted, #6b7280);
+  font-size: 13px;
+}
+
+.inventory-list-item > div:last-child {
+  text-align: right;
+}
+
+@media (max-width: 600px) {
+  .inventory-list-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .inventory-list-item > div:last-child {
+    text-align: left;
+  }
+}

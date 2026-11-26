@@ -1,7 +1,8 @@
 const API_BASE = ''
 
-async function request(url) {
-  const response = await fetch(`${API_BASE}${url}`)
+async function request(url, options = {}) {
+  const response = await fetch(`${API_BASE}${url}`, options)
+
   const text = await response.text()
   let data
 
@@ -12,9 +13,13 @@ async function request(url) {
   }
 
   if (!response.ok) {
-    const error = new Error(data?.message || `Request failed: ${response.status}`)
+    const error = new Error(
+      data?.message || `Request failed: ${response.status}`
+    )
+
     error.status = response.status
     error.data = data
+
     throw error
   }
 
@@ -41,7 +46,20 @@ export const createProduct = (product) => {
     return data
   })
 }
-export const getInventory = (productId) => request(`/api/inventory/${productId}`)
+
+export const getInventory = (productId) =>
+  request(`/api/inventory/${productId}`)
+
+export const getAllInventory = () => request('/api/inventory')
+
+export const updateInventoryStock = (productId, stock) =>
+  request(`/api/inventory/${productId}/stock`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ stock: Number(stock) })
+  })
 export const getRecommendations = () => request('/api/recommendations')
 export const simulateRecommendationFailure = () => request('/api/recommendations/failure')
 export const simulateRecommendationDelay = (seconds = 3) => request(`/api/recommendations/delay?seconds=${seconds}`)

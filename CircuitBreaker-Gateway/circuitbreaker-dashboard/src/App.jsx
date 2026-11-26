@@ -18,6 +18,8 @@ import {
   getProducts,
   createProduct,
   getInventory,
+  getAllInventory,
+  updateInventoryStock,
   getRecommendations,
   getServiceHealth,
   simulateRecommendationFailure,
@@ -108,9 +110,11 @@ function App() {
   const [page, setPage] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const [products, setProducts] = useState([])
-  const [recommendations, setRecommendations] = useState([])
-  const [inventory, setInventory] = useState(null)
+const [products, setProducts] = useState([])
+const [recommendations, setRecommendations] = useState([])
+const [inventory, setInventory] = useState(null)
+const [inventoryList, setInventoryList] = useState([])
+const [inventoryListLoading, setInventoryListLoading] = useState(false)
 
   const [health, setHealth] = useState({
     product: 'Checking',
@@ -146,6 +150,15 @@ function App() {
     try {
       const productData = await getProducts()
       setProducts(Array.isArray(productData) ? productData : [])
+      try {
+  const inventoryData = await getAllInventory()
+
+  setInventoryList(
+    Array.isArray(inventoryData) ? inventoryData : []
+  )
+} catch (error) {
+  console.error('Unable to load inventory:', error)
+}
 
       await loadRecommendations()
     } catch (error) {
@@ -165,6 +178,11 @@ function App() {
 
     const productData = await getProducts()
     setProducts(Array.isArray(productData) ? productData : [])
+    const inventoryData = await getAllInventory()
+
+setInventoryList(
+  Array.isArray(inventoryData) ? inventoryData : []
+)
 
     setMessage('Product added successfully!')
     setMessageType('success')
@@ -230,6 +248,31 @@ function App() {
     setHealth(Object.fromEntries(results))
   }
 
+
+async function loadInventoryList() {
+  setInventoryListLoading(true)
+
+  try {
+    const data = await getAllInventory()
+
+    const items = Array.isArray(data)
+      ? data
+      : data?.inventory || data?.items || []
+
+    setInventoryList(Array.isArray(items) ? items : [])
+  } catch (error) {
+    setInventoryList([])
+
+    setMessage(
+      error.message || 'Unable to load inventory list'
+    )
+
+    setMessageType('error')
+  } finally {
+    setInventoryListLoading(false)
+  }
+}
+
   async function checkInventory() {
     setLoading(true)
     setMessage('')
@@ -247,6 +290,37 @@ function App() {
       setLoading(false)
     }
   }
+
+
+async function saveStock(productId, stock) {
+  setLoading(true)
+  setMessage('')
+
+  try {
+    const updatedInventory =
+      await updateInventoryStock(productId, Number(stock))
+
+    setInventoryList(previous =>
+      previous.map(item =>
+        item.productId === productId
+          ? updatedInventory
+          : item
+      )
+    )
+
+    if (Number(selectedProduct) === productId) {
+      setInventory(updatedInventory)
+    }
+
+    setMessage('Stock updated successfully!')
+    setMessageType('success')
+  } catch (error) {
+    setMessage(error.message || 'Unable to update stock')
+    setMessageType('error')
+  } finally {
+    setLoading(false)
+  }
+}
 
   async function testFailure() {
     setLoading(true)
@@ -483,10 +557,14 @@ function App() {
   }
 
   function navigate(id) {
-    setPage(id)
-    setSidebarOpen(false)
-    setMessage('')
+  setPage(id)
+  setSidebarOpen(false)
+  setMessage('')
+
+  if (id === 'inventory') {
+    loadInventoryList()
   }
+}
 
   const pageTitle =
     menuItems.find(item => item.id === page)?.label || 'Dashboard'
@@ -605,15 +683,19 @@ function App() {
   />
 )}
 
-        {page === 'inventory' && (
-          <Inventory
-            selectedProduct={selectedProduct}
-            setSelectedProduct={setSelectedProduct}
-            inventory={inventory}
-            onCheck={checkInventory}
-            loading={loading}
-          />
-        )}
+        
+{page === 'inventory' && (
+  <Inventory
+    selectedProduct={selectedProduct}
+    setSelectedProduct={setSelectedProduct}
+    inventory={inventory}
+    inventoryList={inventoryList}
+    inventoryListLoading={inventoryListLoading}
+    onCheck={checkInventory}
+    onRefresh={loadInventoryList}
+    loading={loading}
+  />
+)}
 
         {page === 'recommendations' && (
           <Recommendations
@@ -1032,39 +1114,121 @@ if (!success) {
 }
 
 
+
 function Inventory({
   selectedProduct,
   setSelectedProduct,
   inventory,
+  inventoryList = [],
+  inventoryListLoading = false,
   onCheck,
+  onRefresh,
   loading
 }) {
+  const safeInventoryList = Array.isArray(inventoryList)
+    ? inventoryList
+    : []
+
   return (
     <>
       <div className="section-heading">
         <div>
           <h2>Inventory Management</h2>
-          <p>Check stock availability from Inventory Service</p>
+          <p>
+            View stock levels for all products and check
+            individual product availability
+          </p>
         </div>
+
+        <button
+          className="primary-button"
+          onClick={onRefresh}
+          disabled={inventoryListLoading}
+        >
+          {inventoryListLoading
+            ? 'Refreshing...'
+            : 'Refresh Inventory'}
+        </button>
       </div>
 
       <div className="content-card inventory-panel">
-        <label htmlFor="productId">Select Product ID</label>
+        <h3>All Product Stock</h3>
+
+        {inventoryListLoading ? (
+          <p>Loading inventory records...</p>
+        ) : safeInventoryList.length > 0 ? (
+          <div>
+            {safeInventoryList.map((item, index) => {
+              const productId = item.productId ?? item.id
+              const productName =
+                item.productName || item.name || 'Product'
+
+              return (
+                <div
+                  key={productId ?? index}
+                  className="inventory-list-item"
+                >
+                  <div>
+                    <strong>{productName}</strong>
+                    <p>
+                      Product ID: {productId ?? 'N/A'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <strong>
+                      Stock: {item.stock ?? 0}
+                    </strong>
+
+                    <p>
+                      {item.available
+                        ? 'Available'
+                        : 'Out of stock'}
+                    </p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <p>No inventory records available.</p>
+        )}
+      </div>
+
+      <div className="content-card inventory-panel">
+        <h3>Check Individual Product</h3>
+
+        <label htmlFor="productId">
+          Select Product
+        </label>
 
         <select
           id="productId"
           value={selectedProduct}
-          onChange={event => setSelectedProduct(event.target.value)}
+          onChange={event =>
+            setSelectedProduct(event.target.value)
+          }
         >
-          <option value="1">Product 1 - Laptop</option>
-          <option value="2">Product 2 - Mobile</option>
-          <option value="3">Product 3 - Headphones</option>
+          {safeInventoryList.map((item, index) => {
+            const productId = item.productId ?? item.id
+            const productName =
+              item.productName || item.name || 'Product'
+
+            return (
+              <option
+                key={productId ?? index}
+                value={productId}
+              >
+                Product {productId} - {productName}
+              </option>
+            )
+          })}
         </select>
 
         <button
           className="primary-button"
           onClick={onCheck}
-          disabled={loading}
+          disabled={loading || safeInventoryList.length === 0}
         >
           {loading ? 'Checking...' : 'Check Inventory'}
         </button>
@@ -1072,13 +1236,17 @@ function Inventory({
         {inventory && (
           <div className="inventory-result">
             <h3>Inventory Response</h3>
-            <pre>{JSON.stringify(inventory, null, 2)}</pre>
+
+            <pre>
+              {JSON.stringify(inventory, null, 2)}
+            </pre>
           </div>
         )}
       </div>
     </>
   )
 }
+
 
 function Recommendations({ recommendations, mode, onRefresh }) {
   return (
