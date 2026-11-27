@@ -744,3 +744,28 @@ body {
 .row-menu { border: 1px solid transparent; transition: border-color .16s ease, background .16s ease, color .16s ease; }
 .row-menu:hover { border-color: #40546b; }
 .table-footer { padding: 0 2px; }
+
+@media (max-width: 840px) {
+  .health-strip { grid-template-columns: 38px minmax(0, 1fr) auto; }
+  .health-strip-action { grid-column: 2 / 4; justify-self: start; }
+}
+
+@media (max-width: 540px) {
+  .health-strip { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 9px; margin-bottom: 11px; padding: 10px; border-radius: 10px; }
+  .health-strip-icon { width: 34px; height: 34px; border-radius: 9px; }
+  .health-strip-copy strong { font-size: 11px; }
+  .health-strip-copy > span { font-size: 9px; }
+  .health-strip-state { padding: 4px 6px; font-size: 8px; }
+  .health-strip-action { grid-column: 2 / 4; padding: 6px 8px; font-size: 9px; }
+  .metric-foot .trend-positive, .metric-foot .trend-warning, .metric-foot .trend-probing { padding: 3px 5px; font-size: 8px; }
+  .search-box { height: 36px; }
+  .service-actions .range-select, .event-controls .range-select { font-size: 9px; }
+  .table-wrap th { position: static; }
+}
+
+@media (max-width: 380px) {
+  .health-strip { grid-template-columns: 32px minmax(0, 1fr); }
+  .health-strip-state, .health-strip-action { grid-column: 2; justify-self: start; }
+  .health-strip-icon { width: 32px; height: 32px; }
+  .metric-foot { flex-wrap: wrap; }
+}
