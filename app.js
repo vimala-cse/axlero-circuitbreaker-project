@@ -87,6 +87,29 @@ function showToast(message) {
   }, 2800);
 }
 
+function renderHealthSummary() {
+  const strip = document.querySelector('#health-strip');
+  const openCount = services.filter((service) => service.breaker === 'OPEN').length;
+  const probingCount = services.filter((service) => service.breaker === 'HALF-OPEN').length;
+  const healthyCount = services.filter((service) => service.status === 'healthy').length;
+  const degradedCount = services.length - healthyCount;
+  const state = openCount ? 'attention' : probingCount ? 'probing' : degradedCount ? 'attention' : 'healthy';
+  strip.dataset.state = state;
+  document.querySelector('#health-strip-title').textContent = openCount
+    ? 'Circuit breaker needs attention'
+    : probingCount
+      ? 'Health probe in progress'
+      : degradedCount
+        ? 'Service health degraded'
+        : 'All services healthy';
+  document.querySelector('#health-strip-detail').textContent = `${healthyCount} of ${services.length} services healthy${degradedCount ? ` · ${degradedCount} degraded` : ''}`;
+  document.querySelector('#health-strip-state').textContent = openCount
+    ? `${openCount} breaker${openCount === 1 ? '' : 's'} open`
+    : probingCount
+      ? `${probingCount} probe${probingCount === 1 ? '' : 's'} running`
+      : 'No open breakers';
+}
+
 function getVisibleServices() {
   const query = document.querySelector('#service-search').value.trim().toLowerCase();
   const statusFilter = document.querySelector('#service-filter').value;
@@ -128,6 +151,7 @@ function renderServices() {
   document.querySelector('#nav-service-count').textContent = services.length;
   document.querySelector('#showing-count').textContent = filteredServices.length;
   document.querySelector('#export-services').disabled = filteredServices.length === 0;
+  renderHealthSummary();
 }
 
 function chartPath(values, width, height, max) {
