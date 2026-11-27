@@ -704,3 +704,23 @@ body {
 .health-strip[data-state="probing"] .health-strip-state { border-color: #50456f; color: #c8b6ff; background: #28233a; }
 .health-strip-action { padding: 7px 10px; border: 1px solid #455364; border-radius: 7px; color: #e0e8f2; background: #202b39; font-size: 10px; cursor: pointer; transition: border-color .18s ease, background .18s ease; }
 .health-strip-action:hover { border-color: #708397; background: #293849; }
+
+/* Make key service metrics easier to scan at a glance. */
+.metric-card { padding: 17px 18px 15px; }
+.metric-heading { color: #b3bfd0; font-size: 9px; }
+.metric-icon { width: 28px; height: 28px; border-radius: 9px; box-shadow: inset 0 1px #ffffff12; }
+.metric-value { margin: 12px 0 10px; font-size: clamp(27px, 2.25vw, 32px); line-height: 1; }
+.metric-unit { font-size: 13px; }
+.metric-foot { gap: 7px; color: #9ba8ba; font-size: 9px; }
+.metric-foot .trend-positive, .metric-foot .trend-warning {
+  padding: 4px 6px;
+  border: 1px solid #315944;
+  border-radius: 999px;
+  background: #1a3025;
+  font: 9px var(--mono);
+}
+.metric-foot .trend-warning { border-color: #634e31; background: #302619; }
+.metric-foot .trend-probing { padding: 4px 6px; border: 1px solid #51466d; border-radius: 999px; background: #28233a; font: 9px var(--mono); }
+.sparkline { width: 66px; height: 23px; }
+.chart-summary strong { font-variant-numeric: tabular-nums; letter-spacing: -.6px; }
+.chart-error { padding: 4px 7px; border: 1px solid #5e4b31; border-radius: 999px; background: #2b2419; color: #f4d49d; font: 9px var(--mono); }
