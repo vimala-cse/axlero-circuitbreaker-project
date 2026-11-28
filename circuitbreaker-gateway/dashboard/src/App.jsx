@@ -56,9 +56,9 @@ function Pill({ kind, children }) {
   return <span className={'pill ' + kind}>{children || KIND_LABEL[kind]}</span>
 }
 
-function Card({ title, hint, children, className = '', right }) {
+function Card({ id, title, hint, children, className = '', right }) {
   return (
-      <section className={'card ' + className}>
+      <section id={id} className={'card ' + className}>
         {title && (
             <header className="card-head">
               <div>
@@ -90,6 +90,27 @@ function Lever({ pos, tone }) {
 // ---------------------------------------------------------------
 // Main app: one page, top to bottom.
 // ---------------------------------------------------------------
+
+const SECTIONS = [['overview', 'Overview'], ['protection', 'Protection'], ['chaos', 'Chaos lab'], ['events', 'Events'], ['shop', 'Shop']]
+function NavBar() {
+  const [active, setActive] = useState('overview')
+  useEffect(() => {
+    const onScroll = () => {
+      let cur = SECTIONS[0][0]
+      for (const [id] of SECTIONS) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < 140) cur = id }
+      setActive(cur)
+    }
+    onScroll(); window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+  const go = (e, id) => { e.preventDefault(); const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+  return (
+      <nav className="nav" aria-label="Sections">
+        {SECTIONS.map(([id, label]) => <a key={id} href={'#' + id} className={active === id ? 'on' : ''} onClick={(e) => go(e, id)}>{label}</a>)}
+      </nav>
+  )
+}
+
 export default function App() {
   const [theme, setTheme] = useState(() => {
     try { return localStorage.getItem('cb-theme') || 'auto' } catch { return 'auto' }
@@ -352,6 +373,7 @@ export default function App() {
             </span>
               CircuitBreaker
             </div>
+            <NavBar />
             <div className="top-right">
             <span className={'chip ' + (gatewayUp ? 'good' : 'bad')}>
               <i className="dot" />{gatewayUp ? 'Gateway online' : 'Gateway offline'}
@@ -364,7 +386,7 @@ export default function App() {
         </header>
 
         <main className="wrap">
-          <section className="headline">
+          <section id="overview" className="headline">
             <h1><span className={'hdot ' + tone} />{headline}</h1>
             <p>{sub}</p>
           </section>
@@ -394,7 +416,7 @@ export default function App() {
           </section>
 
           {/* 2. Protection: what the gateway does to keep things safe */}
-          <section aria-label="Protection">
+          <section id="protection" aria-label="Protection">
             <h2 className="section-title">What protects the shop</h2>
             <div className="protect">
               <Card className="tile">
@@ -445,7 +467,7 @@ export default function App() {
           </section>
 
           {/* 3. Chaos + live requests */}
-          <div className="two">
+          <div id="chaos" className="two">
             <Card title="Break something on purpose" hint={'Recommendation is in ' + chaos + ' mode. No restart needed.'}>
               <div className="seg" role="group" aria-label="Recommendation behaviour">
                 {modes.map((m) => (
@@ -487,7 +509,7 @@ export default function App() {
           </div>
 
           {/* 3b. What happened, in order */}
-          <Card title="What happened" hint="Breaker changes and chaos switches, newest first.">
+          <Card id="events" title="What happened" hint="Breaker changes and chaos switches, newest first.">
             {events.length === 0 ? <p className="empty">Nothing yet. Press Trigger latency and watch the breaker react.</p> : (
                 <ul className="log">
                   {events.map((e) => (
@@ -502,7 +524,7 @@ export default function App() {
           </Card>
 
           {/* 4. What the shopper sees */}
-          <Card title="What the shopper sees" hint="Pick a product to load its recommendations.">
+          <Card id="shop" title="What the shopper sees" hint="Pick a product to load its recommendations.">
             {products.length === 0 ? <p className="empty">No products yet. Make sure the gateway and Product service are running.</p> : (
                 <div className="products">
                   {products.map((x) => {
